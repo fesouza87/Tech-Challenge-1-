@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+
+/Diagnostico Cancer Mama Dataset/
+/Diagnostico Diabetes Dataset/
+/Imagens Cancer Mama/
+/RaioX Pneumonia/
+/Social Media/
+
+/Tech Challenge 1/results/
