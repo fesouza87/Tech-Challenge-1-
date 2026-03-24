@@ -1,0 +1,52 @@
+Base Utilizada (TSP/GA)
+
+- Repositorio: C:\Users\felip\source\FIAP\TechChallenge1\Tech-Challenge-1-\genetic_algorithm_tsp-main\genetic_algorithm_tsp-main
+- Licenca: CC0 1.0 Universal (ver C:\Users\felip\source\FIAP\TechChallenge1\Tech-Challenge-1-\genetic_algorithm_tsp-main\genetic_algorithm_tsp-main\LICENSE)
+- Componentes reutilizados: generate_random_population, sort_population, order_crossover, mutate
+- Integracao no projeto: Tech Challenge 2 - Rotas/routes.py (solve_ga + fitness com restricoes)
+
+Comparativo de Desempenho
+
+- GA (solucao): objetivo=739.29 | base=639.29 | penalidades=100.00 | viavel=True
+- Heuristica - Nearest Neighbor: objetivo=1120.72 | base=520.72 | penalidades=600.00 | viavel=True
+- Heuristica - Prioridade Primeiro: objetivo=624.33 | base=624.33 | penalidades=0.00 | viavel=True
+- Heuristica - Melhor de 200 Aleatorias: objetivo=14991.93 | base=641.93 | penalidades=14350.00 | viavel=False
+
+Relatorio de Rotas
+
+Feasible: True
+Custo total (distancia + penalidades): 739.29
+Penalidades:
+- autonomy: 0.00
+- capacity: 0.00
+- priority: 100.00
+- unassigned: 0.00
+Entregas alocadas: 20/20
+
+Instrucoes de Entrega
+
+- Veiculo V1: carga 44.7/45.0, distancia 222.5/260.0
+  1. Unidade 3 (L002) | entrega D016 | prioridade regular | demanda 1.8
+  2. Unidade 16 (L015) | entrega D006 | prioridade regular | demanda 6.2
+  3. Unidade 19 (L018) | entrega D009 | prioridade critical | demanda 5.9
+  4. Unidade 15 (L014) | entrega D002 | prioridade regular | demanda 2.5
+  5. Unidade 14 (L013) | entrega D005 | prioridade critical | demanda 8.0
+  6. Unidade 7 (L006) | entrega D018 | prioridade regular | demanda 3.4
+  7. Unidade 24 (L023) | entrega D019 | prioridade regular | demanda 2.1
+  8. Unidade 22 (L021) | entrega D015 | prioridade regular | demanda 7.6
+  9. Unidade 2 (L001) | entrega D003 | prioridade regular | demanda 7.2
+
+- Veiculo V2: carga 22.4/45.0, distancia 232.5/260.0
+  1. Unidade 17 (L016) | entrega D011 | prioridade critical | demanda 3.3
+  2. Unidade 11 (L010) | entrega D001 | prioridade regular | demanda 5.0
+  3. Unidade 13 (L012) | entrega D007 | prioridade regular | demanda 5.1
+  4. Unidade 18 (L017) | entrega D014 | prioridade regular | demanda 2.8
+  5. Unidade 9 (L008) | entrega D017 | prioridade regular | demanda 6.3
+
+- Veiculo V3: carga 28.8/45.0, distancia 184.3/260.0
+  1. Unidade 8 (L007) | entrega D010 | prioridade regular | demanda 7.0
+  2. Unidade 20 (L019) | entrega D013 | prioridade regular | demanda 5.2
+  3. Unidade 4 (L003) | entrega D012 | prioridade regular | demanda 5.2
+  4. Unidade 10 (L009) | entrega D000 | prioridade regular | demanda 1.5
+  5. Unidade 1 (L000) | entrega D004 | prioridade regular | demanda 2.0
+  6. Unidade 5 (L004) | entrega D008 | prioridade regular | demanda 8.0

@@ -22,6 +22,18 @@ def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
+def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df.columns = [str(c).strip() for c in df.columns]
+    unnamed_cols = [c for c in df.columns if c.startswith("Unnamed") or c == ""]
+    if unnamed_cols:
+        df = df.drop(columns=unnamed_cols)
+    all_nan_cols = [c for c in df.columns if df[c].isna().all()]
+    if all_nan_cols:
+        df = df.drop(columns=all_nan_cols)
+    return df
+
+
 def plot_correlation_heatmap(df: pd.DataFrame, output_path: Path, title: str) -> None:
     # Gera e salva o mapa de calor de correlação entre as variáveis numéricas do dataset
     plt.figure(figsize=(12, 10))
@@ -83,9 +95,14 @@ def try_compute_shap_values(model, X_sample, feature_names, output_path: Path) -
         import shap
     except ImportError:
         return
+    if hasattr(X_sample, "toarray"):
+        X_sample = X_sample.toarray()
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_sample)
-    shap.summary_plot(shap_values, X_sample, feature_names=feature_names, show=False)
+    values_for_plot = shap_values
+    if isinstance(shap_values, list):
+        values_for_plot = shap_values[1] if len(shap_values) > 1 else shap_values[0]
+    shap.summary_plot(values_for_plot, X_sample, feature_names=feature_names, show=False)
     plt.tight_layout()
     plt.savefig(output_path)
     plt.close()
@@ -96,7 +113,7 @@ def build_preprocessor(df: pd.DataFrame, target_column: str, drop_columns=None):
     if drop_columns is None:
         drop_columns = []
     X = df.drop(columns=[target_column] + drop_columns)
-    numeric_features = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
+    numeric_features = X.select_dtypes(include=[np.number]).columns.tolist()
     categorical_features = X.select_dtypes(include=["object", "category"]).columns.tolist()
     numeric_transformer = Pipeline(
         steps=[
@@ -139,7 +156,7 @@ def get_feature_names(preprocessor) -> list[str]:
 def run_breast_cancer_tabular(output_dir: Path) -> None:
     # Executa pipeline completo para diagnóstico de câncer de mama (benigno x maligno)
     ensure_dir(output_dir)
-    df = pd.read_csv(CANCER_MAMA_CSV)
+    df = clean_dataframe(pd.read_csv(CANCER_MAMA_CSV))
     # Converte rótulos M/B em valores binários 1/0
     df["diagnosis"] = df["diagnosis"].map({"M": 1, "B": 0})
     df = df.drop(columns=["id"])
@@ -215,7 +232,7 @@ def run_breast_cancer_tabular(output_dir: Path) -> None:
 def run_diabetes_tabular(output_dir: Path) -> None:
     # Executa pipeline completo para diagnóstico de diabetes
     ensure_dir(output_dir)
-    df = pd.read_csv(DIABETES_CSV)
+    df = clean_dataframe(pd.read_csv(DIABETES_CSV))
     cols_with_zero_as_missing = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
     # Substitui zeros por NaN em colunas onde zero representa dado faltante
     for col in cols_with_zero_as_missing:
@@ -302,7 +319,7 @@ def engineer_social_media_features(df: pd.DataFrame) -> pd.DataFrame:
 def run_social_media_tabular(output_dir: Path) -> None:
     # Executa pipeline para prever se um post de redes sociais será viral ou não
     ensure_dir(output_dir)
-    df = pd.read_csv(SOCIAL_MEDIA_CSV)
+    df = clean_dataframe(pd.read_csv(SOCIAL_MEDIA_CSV))
     df = engineer_social_media_features(df)
     plot_correlation_heatmap(df, output_dir / "correlacao_social_media.png", "Correlação Social Media")
     target_column = "is_viral"

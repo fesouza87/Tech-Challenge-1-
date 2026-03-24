@@ -191,3 +191,240 @@ Principais subpastas:
 - `results/visao_computacional/cancer_mama/`
   - `mamografia_nao_treinada.txt` (quando as imagens não estão disponíveis).  
   - Quando as imagens forem adicionadas corretamente, o pipeline passa a gerar também `metricas_mamografia.txt`.
+
+---
+
+# Tech Challenge 2 – Rotas (Otimização de Rotas Médicas)
+
+Este segundo projeto adiciona um sistema de **otimização de rotas** para distribuição de medicamentos e insumos, com foco em um cenário hospitalar com **restrições realistas** (prioridade, capacidade, autonomia e múltiplos veículos). A solução combina:
+
+- **Algoritmos Genéticos (GA)** para resolver um problema de roteamento inspirado no TSP/VRP.
+- **Baselines/heurísticas** para comparação de desempenho.
+- **LLMs (opcional)** para gerar relatórios e instruções em linguagem natural via Ollama local (ver `llm.py`).
+
+O código principal do Tech Challenge 2 está no diretório:
+
+- `Tech Challenge 2 - Rotas/`
+
+## Estrutura do Projeto (Tech Challenge 2)
+
+No diretório `Tech Challenge 2 - Rotas/`:
+
+- `main.py`  
+  Interface de linha de comando (CLI) para gerar instância, otimizar rotas, visualizar e gerar relatórios.
+
+- `routes.py`  
+  Núcleo do problema: modelagem dos dados (Local, Entrega, Veículo), avaliação (fitness), restrições (capacidade/autonomia/prioridade), baselines e solver GA.
+
+- `visualization.py`  
+  Visualização das rotas em PNG usando matplotlib (opcional).
+
+- `llm.py`  
+  Geração de texto (relatório e perguntas/respostas) e integração opcional com LLM via HTTP (Ollama: `/api/generate`). Provider suportado neste build: Ollama.
+
+- `config.py`  
+  Caminhos padrão e diretório de resultados.
+
+- `requirements.txt`  
+  Dependências mínimas do TC2 (atualmente, `matplotlib` para visualização).
+
+Saídas são geradas em:
+
+- `Tech Challenge 2 - Rotas/results/`
+
+## Modelo do Problema (Otimização de Rotas)
+
+O projeto trabalha com uma instância composta por:
+
+- **Depósito (DEPOT)**: ponto de partida e retorno.
+- **Locais**: pontos (x, y) representando unidades/endereços.
+- **Entregas**: associadas a um local, com:
+  - `demand` (demanda/carga)
+  - `priority` (`critical` ou `regular`)
+- **Veículos**: cada um com:
+  - `capacity` (capacidade máxima)
+  - `max_distance` (autonomia máxima da rota)
+
+### Restrições implementadas
+
+- **Múltiplos veículos (VRP)**: uma solução gera uma rota por veículo.
+- **Capacidade**: a soma das demandas atendidas por um veículo não pode exceder `capacity`.
+- **Autonomia**: a distância total da rota do veículo não pode exceder `max_distance`.
+- **Prioridade**: entregas `critical` são penalizadas se ocorrerem tarde no sequenciamento (incentiva atendimento mais cedo).
+- **Entregas não alocadas**: se faltar veículo/capacidade/autonomia para atender tudo, o fitness recebe penalidade alta.
+
+## Código Base de TSP (Reuso no TC2)
+
+O repositório contém um código base de **TSP com Algoritmo Genético** em:
+
+- `genetic_algorithm_tsp-main/genetic_algorithm_tsp-main/`
+
+Esse código base é utilizado diretamente no Tech Challenge 2 para:
+
+- Gerar população inicial (`generate_random_population`)
+- Ordenar população por fitness (`sort_population`)
+- Crossover OX (`order_crossover`)
+- Mutação (`mutate`)
+
+O relatório do TC2 inclui uma seção “Base Utilizada (TSP/GA)” com o caminho do repositório e a licença.
+
+## Requisitos (Tech Challenge 2)
+
+- Python 3.11+ instalado
+- Pip disponível no PATH
+
+Dependências:
+
+- Para rodar otimização/relatório sem plot: apenas Python padrão.
+- Para gerar a imagem de rotas (`routes.png`): instalar `matplotlib` via `Tech Challenge 2 - Rotas/requirements.txt`.
+
+## Instalação (Tech Challenge 2)
+
+No diretório raiz do repositório:
+
+```bash
+pip install -r "Tech Challenge 2 - Rotas/requirements.txt"
+```
+
+Observação: se você não quiser visualização, o projeto ainda gera `solution.json` e `report.txt`. O comando `--task all` tenta visualizar, mas ignora a etapa caso as dependências estejam ausentes.
+
+## Execução com Python (Tech Challenge 2)
+
+No diretório raiz:
+
+```bash
+python "Tech Challenge 2 - Rotas/main.py" --task <task>
+```
+
+### Tasks disponíveis
+
+- `all`  
+  Executa: `generate` + `optimize` + `visualize` + `report`.  
+  Se a visualização não puder ser carregada (matplotlib ausente), ela é ignorada e o relatório ainda é gerado.
+
+- `generate`  
+  Gera uma instância sintética e salva em `results/instance.json`.
+
+- `optimize`  
+  Executa o algoritmo genético para roteamento e salva em `results/solution.json`.
+
+- `visualize`  
+  Gera `results/routes.png` (se houver dependências).
+
+- `report`  
+  Gera `results/report.txt`, contendo:
+  - Base utilizada (TSP/GA)
+  - Comparativo de desempenho (GA vs baselines)
+  - Resumo da solução e instruções por veículo
+
+- `ask`  
+  Responde uma pergunta em linguagem natural sobre a instância/rotas e salva em `results/answer.txt` (pode usar LLM se habilitada).
+
+### Parâmetros principais
+
+- `--population` (default: 80): tamanho da população do GA  
+- `--generations` (default: 250): número de gerações  
+- `--mutation` (default: 0.3): probabilidade de mutação  
+- `--benchmark-random` (default: 200): quantidade de rotas aleatórias para o baseline “melhor de N aleatórias”  
+- `--use-llm`: força geração do relatório via LLM (se configurada)  
+- `--instance`, `--solution`, `--plot`: caminhos de entrada/saída  
+- `--seed`: semente de aleatoriedade (reprodutibilidade)  
+
+## Comparativo de Desempenho (Baselines)
+
+O relatório do TC2 calcula e imprime um comparativo entre:
+
+- GA (solução final)
+- Heurística: Nearest Neighbor
+- Heurística: Prioridade Primeiro (critical antes de regular, com nearest neighbor em cada grupo)
+- Heurística: Melhor de N rotas aleatórias (N configurável)
+
+Cada linha inclui:
+
+- `objetivo` = distância base + penalidades (fitness total)
+- `base` = distância total percorrida (sem penalidades)
+- `penalidades` = soma das penalidades (capacidade/autonomia/prioridade/unassigned)
+- `viavel` = indicador booleano
+
+## Integração com LLM (Opcional)
+
+O projeto suporta geração de relatórios e respostas via LLM por variáveis de ambiente, usando Ollama local.
+
+### Ollama (local)
+
+Defina:
+
+- `LLM_ENABLE=1`
+- `LLM_PROVIDER=ollama`
+- `LLM_MODEL=deepseek-r1:8b` (recomendado) ou `llama3.1:8b` (alternativa leve)
+
+Opcional:
+
+- `OLLAMA_HOST=http://localhost:11434`
+- `LLM_TEMPERATURE=0.2`
+- `LLM_NUM_PREDICT=900`
+- `LLM_HTTP_TIMEOUT=1200` (default recomendado; aumente se houver “timed out”)
+
+Então rode:
+
+```bash
+python "Tech Challenge 2 - Rotas/main.py" --task report --use-llm
+```
+
+Notas:
+- Em caso de falha, é gerado `Tech Challenge 2 - Rotas/results/report_llm_error.txt` com a causa (timeout, modelo ausente, resposta vazia/“thinking”).
+- Modelos muito grandes podem falhar por memória; prefira `deepseek-r1:8b` ou `llama3.1:8b`.
+- Este build suporta apenas Ollama.
+
+---
+
+## Glossário (TC2)
+
+- TSP (Traveling Salesman Problem / Problema do Caixeiro Viajante)  
+  Problema clássico de encontrar a menor rota que visita todos os pontos e retorna ao início.  
+  Tipicamente um único “veículo”, sem restrições como capacidade/autonomia.
+
+- VRP (Vehicle Routing Problem / Problema de Roteamento de Veículos)  
+  Extensão prática do TSP: vários veículos saindo de um depósito, com restrições reais  
+  (capacidade, autonomia, prioridades, janelas de tempo). Objetivo pode incluir penalidades.
+
+- GA (Genetic Algorithm / Algoritmo Genético)  
+  Técnica de otimização baseada em evolução. Mantém uma população de soluções; melhora por seleção,  
+  crossover (recombinação) e mutação. Pode usar elitismo e semente para reprodutibilidade.
+
+- Fitness (Função objetivo / Aptidão)  
+  Métrica que o algoritmo minimiza. No TC2 é `distância + penalidades`, onde penalidades cobrem:  
+  `capacity` (carga acima do limite), `autonomy` (distância acima da autonomia),  
+  `priority` (entregas críticas tardias/ausentes) e `unassigned` (entregas não alocadas).
+
+- Baseline (Linha de base)  
+  Métodos simples para comparação de desempenho:  
+  Nearest Neighbor, Prioridade Primeiro, Melhor de N Aleatórias.  
+  Servem para validar que o GA agrega valor frente a heurísticas.
+
+- LLM (Large Language Model)  
+  Modelo de linguagem usado para sintetizar relatórios e respostas. No projeto, via **Ollama** local  
+  (ex.: `LLM_MODEL="deepseek-r1:8b"` ou `LLM_MODEL="llama3.1:8b"`). Controlado por variáveis de ambiente (`LLM_ENABLE`, `LLM_PROVIDER`, `LLM_MODEL`, `LLM_HTTP_TIMEOUT`).
+
+- Ollama  
+  Servidor local de modelos. Endpoint `/api/generate`. Configurável por `OLLAMA_HOST`.  
+  Permite rodar modelos sem depender de serviços externos.
+
+- Seed (Semente)  
+  Valor que fixa aleatoriedade para reprodutibilidade (`--seed`).  
+  Garante execuções determinísticas em demonstrações/avaliações.
+
+- Depósito (DEPOT)  
+  Ponto inicial/final das rotas. Todas as rotas saem e retornam a este ponto.
+
+- Instância  
+  Conjunto com depósito, locais, entregas e veículos. Serializada em `results/instance.json`.
+
+- Plano de rotas  
+  Rotas por veículo e métricas associadas (custo total, penalidades, viabilidade).  
+  Serializado em `results/solution.json` e detalhado em `results/report.txt`.
+  Quando LLM está habilitado, arquivos adicionais são gerados:
+  - `results/report_llm.txt` (relatório textual via LLM)
+  - `results/report_llm_error.txt` (diagnóstico quando falhar)
+  - `results/answer_llm.txt` (resposta via LLM para `--task ask`, se configurada)
+  - `results/answer_llm_error.txt` (diagnóstico quando falhar)

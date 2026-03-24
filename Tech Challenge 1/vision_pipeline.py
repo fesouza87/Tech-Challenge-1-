@@ -83,19 +83,32 @@ def train_pneumonia_cnn(output_dir: Path, image_size=(224, 224), epochs: int = 3
     from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
     checkpoint_path = output_dir / "melhor_modelo_pneumonia.keras"
+    use_external_validation = X_val.size != 0 and y_val.size != 0
+    monitor = "val_loss" if use_external_validation else "loss"
     callbacks = [
-        EarlyStopping(monitor="val_loss", patience=2, restore_best_weights=True),
-        ModelCheckpoint(filepath=str(checkpoint_path), monitor="val_loss", save_best_only=True),
+        EarlyStopping(monitor=monitor, patience=2, restore_best_weights=True),
+        ModelCheckpoint(filepath=str(checkpoint_path), monitor=monitor, save_best_only=True),
     ]
-    model.fit(
-        X_train,
-        y_train,
-        validation_data=(X_val, y_val),
-        epochs=epochs,
-        batch_size=batch_size,
-        callbacks=callbacks,
-        verbose=1,
-    )
+    if use_external_validation:
+        model.fit(
+            X_train,
+            y_train,
+            validation_data=(X_val, y_val),
+            epochs=epochs,
+            batch_size=batch_size,
+            callbacks=callbacks,
+            verbose=1,
+        )
+    else:
+        model.fit(
+            X_train,
+            y_train,
+            validation_split=0.2,
+            epochs=epochs,
+            batch_size=batch_size,
+            callbacks=callbacks,
+            verbose=1,
+        )
     test_loss, test_acc = model.evaluate(X_test, y_test, verbose=0)
     metrics_text = []
     metrics_text.append(f"Test loss: {test_loss:.4f}")

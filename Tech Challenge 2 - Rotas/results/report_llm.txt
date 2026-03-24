@@ -1,0 +1,86 @@
+RELATORIO VIA LLM
+
+Este arquivo mostra a saida de uma LLM.
+
+BASE
+Base Utilizada (TSP/GA)
+
+- Repositorio: C:\Users\felip\source\FIAP\TechChallenge1\Tech-Challenge-1-\genetic_algorithm_tsp-main\genetic_algorithm_tsp-main
+- Licenca: CC0 1.0 Universal (ver C:\Users\felip\source\FIAP\TechChallenge1\Tech-Challenge-1-\genetic_algorithm_tsp-main\genetic_algorithm_tsp-main\LICENSE)
+- Componentes reutilizados: generate_random_population, sort_population, order_crossover, mutate
+- Integracao no projeto: Tech Challenge 2 - Rotas/routes.py (solve_ga + fitness com restricoes)
+
+RESUMO
+- Objetivo do plano: minimizar distancia total mantendo capacidade e autonomia, e antecipar entregas criticas.
+- Status: plano viavel (todas as entregas alocadas).
+- Ponto de atencao: penalidade de prioridade, indicando que algumas entregas criticas estao ocorrendo tarde na sequencia.
+
+COMPARATIVO
+Resultados calculados:
+- GA (solucao): objetivo=739.29 | base=639.29 | penalidades=100.00 | viavel=True
+- Heuristica - Nearest Neighbor: objetivo=1120.72 | base=520.72 | penalidades=600.00 | viavel=True
+- Heuristica - Prioridade Primeiro: objetivo=624.33 | base=624.33 | penalidades=0.00 | viavel=True
+- Heuristica - Melhor de 200 Aleatorias: objetivo=14991.93 | base=641.93 | penalidades=14350.00 | viavel=False
+
+
+INSTRUCOES
+VEICULO V1:
+Opcao A (rota atual, foco em distancia):
+1) Unidade 3 (L002) | entrega D016 | regular | demanda 1.8
+2) Unidade 16 (L015) | entrega D006 | regular | demanda 6.2
+3) Unidade 19 (L018) | entrega D009 | CRITICAL | demanda 5.9
+4) Unidade 15 (L014) | entrega D002 | regular | demanda 2.5
+5) Unidade 14 (L013) | entrega D005 | CRITICAL | demanda 8.0
+6) Unidade 7 (L006) | entrega D018 | regular | demanda 3.4
+7) Unidade 24 (L023) | entrega D019 | regular | demanda 2.1
+8) Unidade 22 (L021) | entrega D015 | regular | demanda 7.6
+9) Unidade 2 (L001) | entrega D003 | regular | demanda 7.2
+
+Opcao B (prioriza criticos mais cedo):
+1) Unidade 19 (L018) | entrega D009 | CRITICAL | demanda 5.9
+2) Unidade 14 (L013) | entrega D005 | CRITICAL | demanda 8.0
+3) Unidade 16 (L015) | entrega D006 | regular | demanda 6.2
+4) Unidade 15 (L014) | entrega D002 | regular | demanda 2.5
+5) Unidade 3 (L002) | entrega D016 | regular | demanda 1.8
+6) Unidade 7 (L006) | entrega D018 | regular | demanda 3.4
+7) Unidade 24 (L023) | entrega D019 | regular | demanda 2.1
+8) Unidade 22 (L021) | entrega D015 | regular | demanda 7.6
+9) Unidade 2 (L001) | entrega D003 | regular | demanda 7.2
+
+VEICULO V2:
+Opcao A (rota atual, foco em distancia):
+1) Unidade 17 (L016) | entrega D011 | CRITICAL | demanda 3.3
+2) Unidade 11 (L010) | entrega D001 | regular | demanda 5.0
+3) Unidade 13 (L012) | entrega D007 | regular | demanda 5.1
+4) Unidade 18 (L017) | entrega D014 | regular | demanda 2.8
+5) Unidade 9 (L008) | entrega D017 | regular | demanda 6.3
+
+Opcao B (reduz risco de atraso):
+1) Unidade 17 (L016) | entrega D011 | CRITICAL | demanda 3.3
+2) Unidade 18 (L017) | entrega D014 | regular | demanda 2.8
+3) Unidade 13 (L012) | entrega D007 | regular | demanda 5.1
+4) Unidade 11 (L010) | entrega D001 | regular | demanda 5.0
+5) Unidade 9 (L008) | entrega D017 | regular | demanda 6.3
+
+VEICULO V3:
+Opcao A (rota atual):
+1) Unidade 8 (L007) | entrega D010 | regular | demanda 7.0
+2) Unidade 20 (L019) | entrega D013 | regular | demanda 5.2
+3) Unidade 4 (L003) | entrega D012 | regular | demanda 5.2
+4) Unidade 10 (L009) | entrega D000 | regular | demanda 1.5
+5) Unidade 1 (L000) | entrega D004 | regular | demanda 2.0
+6) Unidade 5 (L004) | entrega D008 | regular | demanda 8.0
+
+Opcao B (rota alternativa):
+1) Unidade 10 (L009) | entrega D000 | regular | demanda 1.5
+2) Unidade 1 (L000) | entrega D004 | regular | demanda 2.0
+3) Unidade 4 (L003) | entrega D012 | regular | demanda 5.2
+4) Unidade 8 (L007) | entrega D010 | regular | demanda 7.0
+5) Unidade 20 (L019) | entrega D013 | regular | demanda 5.2
+6) Unidade 5 (L004) | entrega D008 | regular | demanda 8.0
+
+ALERTAS
+- A secao "Melhoria sugerida" e as "Opcoes B" sao sugestoes narrativas e nao foram validadas pelo solver no momento.
+- Se for necessario validar de forma automatica, rode o solver e gere um novo solution.json antes de publicar o report_llm.
+- Em ambiente local, o modelo deepseek-r1:8b pode retornar apenas "thinking" ou estourar timeout; nesse caso o sistema cria report_llm_error.txt.
+
