@@ -1,0 +1,215 @@
+:root {
+  --bg: #111b21;
+  --panel: #202c33;
+  --panel2: #1f2c34;
+  --text: #e9edef;
+  --muted: #8696a0;
+  --accent: #00a884;
+  --bubbleIn: #202c33;
+  --bubbleOut: #005c4b;
+  --border: rgba(233, 237, 239, 0.08);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --font: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: radial-gradient(1200px 800px at 85% 10%, rgba(0, 168, 132, 0.22), transparent 60%),
+    radial-gradient(900px 600px at 10% 90%, rgba(0, 92, 75, 0.25), transparent 60%),
+    var(--bg);
+  color: var(--text);
+}
+
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 330px 1fr;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #111b21, #0f171c);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px;
+  gap: 14px;
+}
+
+.sidebar__header {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: var(--shadow);
+}
+
+.sidebar__title {
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+
+.sidebar__subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sidebar__section {
+  padding: 12px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+
+.sidebar__label {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.sidebar__select,
+.sidebar__input {
+  width: 100%;
+  border: 1px solid var(--border);
+  outline: none;
+  background: #0f171c;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.sidebar__hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.chat {
+  display: grid;
+  grid-template-rows: 62px 1fr 72px;
+  background:
+    linear-gradient(180deg, rgba(32, 44, 51, 0.65), rgba(17, 27, 33, 0.95)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cg fill='none' stroke='%232b3a42' stroke-width='1'%3E%3Cpath d='M0 0h120v120H0z'/%3E%3Cpath d='M30 0v120M60 0v120M90 0v120M0 30h120M0 60h120M0 90h120' opacity='0.25'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: cover;
+}
+
+.chat__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0 18px;
+}
+
+.chat__name {
+  font-weight: 650;
+}
+
+.chat__status {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.messages {
+  padding: 18px 18px 8px 18px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.msg {
+  max-width: 820px;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  white-space: pre-wrap;
+  line-height: 1.35;
+}
+
+.msg--out {
+  align-self: flex-end;
+  background: var(--bubbleOut);
+  border-top-right-radius: 6px;
+}
+
+.msg--in {
+  align-self: flex-start;
+  background: var(--bubbleIn);
+  border-top-left-radius: 6px;
+}
+
+.msg__meta {
+  margin-top: 10px;
+  color: rgba(233, 237, 239, 0.8);
+  font-size: 12px;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.chip {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+.composer__input {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #0f171c;
+  color: var(--text);
+  outline: none;
+}
+
+.composer__send {
+  border-radius: 14px;
+  border: none;
+  background: var(--accent);
+  color: #041d16;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.composer__send:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    display: none;
+  }
+}

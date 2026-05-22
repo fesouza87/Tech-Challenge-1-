@@ -428,3 +428,119 @@ Notas:
   - `results/report_llm_error.txt` (diagnóstico quando falhar)
   - `results/answer_llm.txt` (resposta via LLM para `--task ask`, se configurada)
   - `results/answer_llm_error.txt` (diagnóstico quando falhar)
+
+---
+
+# Tech Challenge 3 – Assistente Virtual Médico (LangChain + LangGraph)
+
+Este projeto cria um assistente clínico interno com:
+
+- **Fine-tuning** (LoRA/PEFT) de um LLM com dados internos/sintéticos (scripts de pipeline);
+- **LangChain** para RAG (protocolos internos e evidência externa opcional) e contextualização com dados estruturados do paciente;
+- **LangGraph** para orquestrar fluxos seguros (policy → checagens → alertas → resposta final);
+- **Segurança** (não prescrição), **logging/auditoria** e **explainability** (fontes na resposta);
+- **Frontend** web em estilo chat (lembrando WhatsApp), servido pelo backend.
+
+O código do TC3 fica em:
+
+- `Tech Challenge 3 - Assistente/`
+
+## Instalação (Tech Challenge 3)
+
+No diretório raiz do repositório:
+
+```bash
+pip install -r "Tech Challenge 3 - Assistente/requirements.txt"
+```
+
+## Executar (local)
+
+1) Subir o backend (FastAPI) e a UI:
+
+```bash
+cd "Tech Challenge 3 - Assistente/backend"
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+2) Abrir no navegador:
+
+- `http://127.0.0.1:8000/`
+
+## Configurar LLM (Claude / Anthropic)
+
+Para usar Claude (Anthropic) como LLM do assistente:
+- Defina `ANTHROPIC_API_KEY` no ambiente
+- Defina `TC3_LLM_PROVIDER=anthropic`
+- Defina `TC3_ANTHROPIC_MODEL=claude-sonnet-4-6` (ou o nome exato do modelo habilitado na sua conta)
+
+Exemplo (PowerShell):
+
+```bash
+set ANTHROPIC_API_KEY=SEU_TOKEN
+set TC3_LLM_PROVIDER=anthropic
+set TC3_ANTHROPIC_MODEL=claude-sonnet-4-6
+```
+
+O sistema cria automaticamente (se não existir):
+- Banco SQLite sintético em `Tech Challenge 3 - Assistente/data/patients.db`
+- Vetorstore persistido em `Tech Challenge 3 - Assistente/data/vectorstore/`
+- Log de auditoria em `Tech Challenge 3 - Assistente/logs/audit.jsonl`
+
+## Executar com Docker
+
+No diretório `Tech Challenge 3 - Assistente/`:
+
+```bash
+docker compose up --build
+```
+
+Depois, acessar:
+
+- `http://localhost:8000/`
+
+## Fine-tuning (LoRA) e avaliação
+
+Gerar dados sintéticos (se quiser recriar):
+
+```bash
+python "Tech Challenge 3 - Assistente/scripts/make_synthetic_dataset.py"
+```
+
+Treinar adapter LoRA:
+
+```bash
+python "Tech Challenge 3 - Assistente/scripts/finetune_lora.py" --train_jsonl "Tech Challenge 3 - Assistente/data/synthetic/train.jsonl"
+```
+
+Avaliar geração (smoke test):
+
+```bash
+python "Tech Challenge 3 - Assistente/scripts/evaluate.py" --adapter "Tech Challenge 3 - Assistente/artifacts/lora_adapter"
+```
+
+Para usar o modelo fine-tunado no backend (inference via HuggingFace):
+- `TC3_LLM_PROVIDER=hf`
+- `TC3_HF_MODEL_ID=<modelo_base>`
+- `TC3_HF_ADAPTER_PATH=Tech Challenge 3 - Assistente/artifacts/lora_adapter`
+
+## RAG externo (PubMedQA) – opcional
+
+Conversão do PubMedQA (`ori_pqal.json`) para uso no assistente:
+
+```bash
+python "Tech Challenge 3 - Assistente/scripts/ingest_pubmedqa.py" --src_json "c:\Users\felip\Downloads\pubmedqa-master\pubmedqa-master\data\ori_pqal.json"
+```
+
+Isso gera:
+- `Tech Challenge 3 - Assistente/data/protocols_external/pubmedqa_pqal.jsonl` (RAG externo)
+- `Tech Challenge 3 - Assistente/data/synthetic/pubmedqa_train.jsonl` (SFT opcional)
+
+Para ativar no backend:
+- `TC3_PROTOCOL_EXTERNAL_DIR=Tech Challenge 3 - Assistente/data/protocols_external`
+
+Comportamento de segurança:
+- O retrieval prioriza o índice interno e só consulta o PubMedQA quando não houver match interno suficiente (limiares ajustáveis por `TC3_RAG_INTERNAL_DISTANCE_MAX` e `TC3_RAG_INTERNAL_SIMILARITY_MIN`).
+
+Relatório técnico do TC3:
+
+- `Tech Challenge 3 - Assistente/RELATORIO_TECNICO.md`

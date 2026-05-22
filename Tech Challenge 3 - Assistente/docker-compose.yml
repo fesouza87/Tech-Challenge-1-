@@ -1,0 +1,17 @@
+services:
+  assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      TC3_LLM_PROVIDER: ${TC3_LLM_PROVIDER:-anthropic}
+      TC3_ANTHROPIC_MODEL: ${TC3_ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANONYMIZED_TELEMETRY: "False"
+      TC3_LLM_MODEL: ${TC3_LLM_MODEL:-llama3.1}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
