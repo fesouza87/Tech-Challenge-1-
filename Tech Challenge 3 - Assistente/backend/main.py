@@ -24,6 +24,7 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
     patient_id: str | None = None
     clinician_id: str | None = None
+    llm_mode: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -47,25 +48,62 @@ def create_app() -> FastAPI:
     seed_synthetic(conn)
 
     vectorstore = build_vectorstore(settings.protocol_dir, settings.vectorstore_dir, settings.embeddings_model, settings.protocol_external_dir)
-    llm_client = build_llm_client(
-        provider=settings.llm_provider,
-        ollama_host=settings.ollama_host,
-        ollama_model=settings.llm_model,
-        anthropic_model=settings.anthropic_model,
-        hf_model_id=settings.hf_model_id,
-        hf_adapter_path=settings.hf_adapter_path,
-    )
-    compiled = build_graph(conn=conn, vectorstore=vectorstore, llm_client=llm_client)
+    llm_cache: dict[str, Any] = {}
+    graph_cache: dict[str, Any] = {}
+
+    def resolve_llm(mode: str | None):
+        raw = (mode or "").strip().lower()
+        if raw in {"", "default"}:
+            provider = settings.llm_provider
+            adapter = settings.hf_adapter_path
+        elif raw == "anthropic":
+            provider = "anthropic"
+            adapter = None
+        elif raw == "ollama":
+            provider = "ollama"
+            adapter = None
+        elif raw in {"hf_base", "hf"}:
+            provider = "hf"
+            adapter = None
+        elif raw in {"hf_finetuned", "hf_lora", "finetuned"}:
+            provider = "hf"
+            adapter = settings.hf_adapter_path
+        else:
+            provider = settings.llm_provider
+            adapter = settings.hf_adapter_path
+
+        key = f"{provider}|{settings.anthropic_model}|{settings.llm_model}|{settings.hf_model_id}|{adapter or ''}"
+        cached = llm_cache.get(key)
+        if cached is not None:
+            return key, cached
+
+        llm_client = build_llm_client(
+            provider=provider,
+            ollama_host=settings.ollama_host,
+            ollama_model=settings.llm_model,
+            anthropic_model=settings.anthropic_model,
+            hf_model_id=settings.hf_model_id,
+            hf_adapter_path=adapter,
+        )
+        llm_cache[key] = llm_client
+        return key, llm_client
+
+    default_llm_key, default_llm_client = resolve_llm("default")
+    graph_cache[default_llm_key] = build_graph(conn=conn, vectorstore=vectorstore, llm_client=default_llm_client)
 
     app.state.settings = settings
     app.state.conn = conn
     app.state.vectorstore = vectorstore
-    app.state.llm = llm_client
-    app.state.graph = compiled
+    app.state.llm = default_llm_client
+    app.state.graph = graph_cache[default_llm_key]
+    app.state.llm_cache = llm_cache
+    app.state.graph_cache = graph_cache
+    app.state.resolve_llm = resolve_llm
 
     @app.get("/health")
     def health() -> dict[str, Any]:
-        return {"ok": True, "llm": {"provider": llm_client.info.provider, "model": llm_client.info.model}}
+        llm = app.state.llm
+        return {"ok": True, "llm": {"provider": llm.info.provider, "model": llm.info.model}}
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
@@ -79,7 +117,12 @@ def create_app() -> FastAPI:
     def chat(req: ChatRequest) -> ChatResponse:
         request_id = new_request_id()
         state_in = {"clinician_id": req.clinician_id, "patient_id": req.patient_id, "message": req.message}
-        state_out = app.state.graph.invoke(state_in)
+        llm_key, llm_client = app.state.resolve_llm(req.llm_mode)
+        graph = app.state.graph_cache.get(llm_key)
+        if graph is None:
+            graph = build_graph(conn=app.state.conn, vectorstore=app.state.vectorstore, llm_client=llm_client)
+            app.state.graph_cache[llm_key] = graph
+        state_out = graph.invoke(state_in)
         answer = str(state_out.get("answer") or "")
         alerts = list(state_out.get("alerts") or [])
         sources = list(state_out.get("retrieved") or [])
@@ -92,7 +135,7 @@ def create_app() -> FastAPI:
                 clinician_id=req.clinician_id,
                 patient_id=req.patient_id,
                 input_message=req.message,
-                decision_flow="langgraph:policy->patient->pending_exams->retrieval->answer",
+                decision_flow="langgraph:policy->load_patient->pending_exams->retrieval->generate_answer",
                 model=f"{llm_client.info.provider}:{llm_client.info.model}",
                 retrieval=sources,
                 output_text=answer,

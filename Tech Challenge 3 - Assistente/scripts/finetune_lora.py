@@ -27,6 +27,7 @@ def main() -> int:
     p.add_argument("--model_id", default="TinyLlama/TinyLlama-1.1B-Chat-v1.0")
     p.add_argument("--train_jsonl", required=True)
     p.add_argument("--out_dir", default=os.path.join(os.path.dirname(__file__), "..", "artifacts", "lora_adapter"))
+    p.add_argument("--max_train_samples", type=int, default=0)
     p.add_argument("--epochs", type=float, default=1.0)
     p.add_argument("--lr", type=float, default=2e-4)
     p.add_argument("--batch_size", type=int, default=1)
@@ -41,6 +42,8 @@ def main() -> int:
         tokenizer.pad_token = tokenizer.eos_token
 
     ds = load_dataset("json", data_files={"train": os.path.abspath(args.train_jsonl)})["train"]
+    if int(args.max_train_samples) > 0:
+        ds = ds.select(range(min(int(args.max_train_samples), len(ds))))
 
     def _map(ex: dict[str, Any]) -> dict[str, str]:
         msgs = ex.get("messages") or []

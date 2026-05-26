@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
@@ -23,6 +24,33 @@ class AssistantState(TypedDict, total=False):
 
 
 def build_graph(*, conn, vectorstore, llm_client):
+    smalltalk_rx = re.compile(r"^(oi|ol(a|á)|bom dia|boa tarde|boa noite|hello|hi|eai|e aí)\b", re.IGNORECASE)
+
+    def is_smalltalk(message: str) -> bool:
+        msg = message.strip()
+        if not msg:
+            return True
+        if len(msg) <= 4:
+            return True
+        return bool(smalltalk_rx.search(msg))
+
+    def format_sources_block(sources: list[dict[str, Any]]) -> str:
+        if not sources:
+            return ""
+        lines: list[str] = []
+        lines.append("")
+        lines.append("Fontes recuperadas:")
+        for i, s in enumerate(sources, start=1):
+            title = str(s.get("title") or s.get("doc_id") or "Fonte")
+            source = str(s.get("source") or "")
+            doc_id = str(s.get("doc_id") or "")
+            tag = f"{source}".strip()
+            if doc_id and doc_id not in title:
+                tag = f"{tag} | {doc_id}".strip(" |")
+            suffix = f" ({tag})" if tag else ""
+            lines.append(f"[{i}] {title}{suffix}")
+        return "\n".join(lines).strip()
+
     def format_llm_error_text(exc: Exception) -> str:
         provider = getattr(getattr(llm_client, "info", None), "provider", "llm")
         model = getattr(getattr(llm_client, "info", None), "model", "")
@@ -78,6 +106,9 @@ def build_graph(*, conn, vectorstore, llm_client):
         return state
 
     def node_retrieval(state: AssistantState) -> AssistantState:
+        if is_smalltalk(state["message"]):
+            state["retrieved"] = []
+            return state
         query = state["message"]
         patient = state.get("patient")
         if patient:
@@ -151,6 +182,9 @@ def build_graph(*, conn, vectorstore, llm_client):
         disclaimer = "Este conteúdo é apoio à decisão e requer validação médica; não constitui prescrição."
         if disclaimer.lower() not in text.lower():
             text = text + "\n\n" + disclaimer
+        sources_block = format_sources_block(retrieved)
+        if sources_block and "Fontes recuperadas:" not in text:
+            text = text + "\n\n" + sources_block
         state["answer"] = text
         return state
 

@@ -16,14 +16,23 @@
         <div class="sidebar__section">
           <div class="sidebar__label">Paciente</div>
           <select id="patientSelect" class="sidebar__select">
-            <option value="">Sem paciente</option>
-            <option value="P-0001">P-0001</option>
+            <option value="P-0001" selected>P-0001</option>
             <option value="P-0002">P-0002</option>
           </select>
         </div>
         <div class="sidebar__section">
           <div class="sidebar__label">Identificação</div>
           <input id="clinicianId" class="sidebar__input" placeholder="CRM / usuário" />
+        </div>
+        <div class="sidebar__section">
+          <div class="sidebar__label">Modelo</div>
+          <select id="llmMode" class="sidebar__select">
+            <option value="default">Padrão (env)</option>
+            <option value="anthropic">Claude (Anthropic)</option>
+            <option value="ollama">Ollama (local)</option>
+            <option value="hf_base">HF (base)</option>
+            <option value="hf_finetuned">HF (fine-tuned/LoRA)</option>
+          </select>
         </div>
         <div class="sidebar__section sidebar__hint">
           O assistente não prescreve. Respostas exigem validação médica e citam fontes internas quando disponíveis.

@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: ${TC3_DOCKER_TARGET:-runtime}
     ports:
       - "8000:8000"
     environment:
@@ -12,6 +13,8 @@ services:
       ANONYMIZED_TELEMETRY: "False"
       TC3_LLM_MODEL: ${TC3_LLM_MODEL:-llama3.1}
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      TC3_HF_MODEL_ID: ${TC3_HF_MODEL_ID:-TinyLlama/TinyLlama-1.1B-Chat-v1.0}
+      TC3_HF_ADAPTER_PATH: ${TC3_HF_ADAPTER_PATH:-/app/data/lora_adapter}
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs

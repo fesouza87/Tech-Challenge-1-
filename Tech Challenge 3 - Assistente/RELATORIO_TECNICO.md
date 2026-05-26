@@ -24,11 +24,6 @@ Padronização sugerida (JSONL):
 Foi incluído um pipeline de anonimização simples por regex em `scripts/preprocess_dataset.py`, que remove padrões típicos:
 - CPF, telefone, e-mail, datas.
 
-Para produção, recomenda-se:
-- Pseudonimização determinística (hash com salt seguro) para reidentificação controlada;
-- Dicionários e modelos de NER para PHI (nome, endereço, ID interno);
-- Revisão humana (amostragem) e validação automatizada (detecção de PHI remanescente).
-
 ## 3) Fine-tuning (LoRA/PEFT)
 ### 3.1 Abordagem
 O fine-tuning é feito com LoRA (PEFT) usando TRL (`SFTTrainer`) em dataset chat (`messages`), gerando um adapter (artefato leve) sobre um modelo base (ex.: TinyLlama).
@@ -82,15 +77,27 @@ O snapshot do paciente é usado para contextualizar a resposta e acionar alertas
 ## 5) LangGraph: fluxo de decisão automatizado
 Fluxo implementado:
 1. policy → bloqueia pedidos de prescrição/dose
-2. patient → carrega snapshot do paciente
+2. load_patient → carrega snapshot do paciente
 3. pending_exams → gera alertas de exames pendentes
 4. retrieval → recupera trechos dos protocolos (RAG)
-5. answer → compõe prompt com contexto + fontes + alertas e gera resposta
+5. generate_answer → compõe prompt com contexto + fontes + alertas e gera resposta
 
 Diagrama (alto nível):
 ```
-policy ──┬──> answer (se bloqueado)
-         └──> patient -> pending_exams -> retrieval -> answer -> END
+policy ──┬──> generate_answer (se bloqueado)
+         └──> load_patient -> pending_exams -> retrieval -> generate_answer -> END
+```
+
+## 5.1 Fluxo LangChain (RAG)
+Diagrama (alto nível):
+```
+Documentos (protocolos internos + externos) 
+  -> split (RecursiveCharacterTextSplitter)
+  -> embeddings
+  -> Chroma (vectorstore)
+  -> retrieval (top-k)
+  -> prompt com contexto + fontes
+  -> LLM (Claude/Ollama/HF)
 ```
 
 ## 6) Segurança, validação e auditabilidade
@@ -123,3 +130,12 @@ UI web servida pelo FastAPI (`backend/static`) com:
 Foi incluído `scripts/evaluate.py` para smoke test de geração:
 - Avaliação qualitativa (aderência aos protocolos e linguagem segura)
 - Para produção: incluir conjunto de validação e métricas (ex.: taxa de alucinação, cobertura de protocolos, robustez a prompts adversariais).
+
+Também foi incluído um teste rápido do serviço (end-to-end) via API:
+- Casos: `data/synthetic/eval_cases.jsonl`
+- Runner: `scripts/evaluate_assistant.py` (faz POST em `/api/chat` e coleta indicadores)
+
+Indicadores calculados no runner:
+- Disponibilidade (erros HTTP)
+- Comportamento de recusa em pedidos proibidos (ex.: prescrição)
+- Presença de fontes quando esperado (RAG)

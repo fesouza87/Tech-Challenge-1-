@@ -54,6 +54,7 @@ async function sendMessage() {
   const sendBtn = document.getElementById("sendBtn");
   const patientSelect = document.getElementById("patientSelect");
   const clinicianId = document.getElementById("clinicianId");
+  const llmMode = document.getElementById("llmMode");
   const status = document.getElementById("chatStatus");
 
   const text = (input.value || "").trim();
@@ -69,6 +70,7 @@ async function sendMessage() {
       message: text,
       patient_id: patientSelect.value || null,
       clinician_id: (clinicianId.value || "").trim() || null,
+      llm_mode: (llmMode && llmMode.value) || "default",
     };
     const res = await fetch("/api/chat", {
       method: "POST",

@@ -518,6 +518,12 @@ Avaliar geração (smoke test):
 python "Tech Challenge 3 - Assistente/scripts/evaluate.py" --adapter "Tech Challenge 3 - Assistente/artifacts/lora_adapter"
 ```
 
+Avaliar o serviço rodando (end-to-end, via API):
+
+```bash
+python "Tech Challenge 3 - Assistente/scripts/evaluate_assistant.py" --base_url "http://127.0.0.1:8000"
+```
+
 Para usar o modelo fine-tunado no backend (inference via HuggingFace):
 - `TC3_LLM_PROVIDER=hf`
 - `TC3_HF_MODEL_ID=<modelo_base>`

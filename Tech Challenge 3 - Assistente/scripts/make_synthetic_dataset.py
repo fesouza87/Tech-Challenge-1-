@@ -41,6 +41,24 @@ def main() -> int:
             "source": "protocolo_interno_v1",
             "text": "Objetivo: orientar revisão de controle glicêmico em DM2.\nBoas práticas (não prescritivas):\n1) Revisar glicemias recentes e HbA1c quando disponível.\n2) Checar adesão, dieta, atividade física, efeitos adversos e risco de hipoglicemia.\n3) Verificar função renal e comorbidades para adequação do plano terapêutico.\nSegurança: considerar avaliação urgente se sinais de descompensação, vômitos persistentes, alteração de consciência ou suspeita de cetoacidose/estado hiperosmolar.",
         },
+        {
+            "id": "PR-004",
+            "title": "Modelo interno – laudo (estrutura)",
+            "source": "modelo_interno_v1",
+            "text": "Objetivo: padronizar a estrutura de laudos internos.\nEstrutura sugerida:\n1) Identificação (sem PHI): serviço/unidade, data/hora, tipo de exame.\n2) Indicação clínica (resumo breve).\n3) Técnica (quando aplicável).\n4) Achados (objetivo, por sistema/segmento).\n5) Impressão/Conclusão (síntese, hipóteses diferenciais se apropriado).\n6) Recomendações (não prescritivas): sugerir correlações e exames complementares conforme protocolo; sempre requer validação médica.\nSegurança: não incluir dados pessoais; não prescrever dose/posologia.",
+        },
+        {
+            "id": "PR-005",
+            "title": "Modelo interno – prescrição/receita (restrita)",
+            "source": "modelo_interno_v1",
+            "text": "Objetivo: padronizar a estrutura de prescrição/receita interna SEM que o assistente prescreva.\nCampos (exemplo):\n- Medicamento: (nome)\n- Via: (oral/IV/etc.)\n- Frequência: (campo a ser preenchido por médico)\n- Duração: (campo a ser preenchido por médico)\n- Observações: alergias, interações, ajustes por função renal.\nRegra: o assistente pode sugerir checagens de segurança e campos a preencher, mas nunca definir dose/posologia.",
+        },
+        {
+            "id": "PR-006",
+            "title": "Modelo interno – procedimento (checklist)",
+            "source": "modelo_interno_v1",
+            "text": "Objetivo: checklist para procedimentos internos.\n1) Indicação e contraindicações.\n2) Consentimento e checagem de identidade.\n3) Alergias, anticoagulação, comorbidades relevantes.\n4) Materiais/equipe.\n5) Monitorização e plano de contingência.\n6) Registro pós-procedimento.\nSegurança: sempre requer validação médica e checagem institucional.",
+        },
     ]
     write_jsonl(os.path.join(protocol_dir, "protocols.jsonl"), protocols)
 
@@ -76,6 +94,36 @@ def main() -> int:
                 },
             ]
         },
+        {
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": "Tenho um rascunho de laudo e preciso padronizar no formato do hospital. Quais seções devo incluir?"},
+                {
+                    "role": "assistant",
+                    "content": "Use a estrutura de laudo interna: (1) Identificação do exame (sem dados pessoais), (2) Indicação clínica (resumo), (3) Técnica (se aplicável), (4) Achados objetivos, (5) Impressão/Conclusão com síntese, e (6) Recomendações não prescritivas (correlações e próximos exames conforme protocolo). Evite incluir PHI e não prescreva. Requer validação médica; não é prescrição.",
+                },
+            ]
+        },
+        {
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": "Preciso de um checklist para procedimento antes de levar o paciente para sala. O que checar?"},
+                {
+                    "role": "assistant",
+                    "content": "Checklist sugerido: confirmar indicação/contraindicações, identidade e consentimento, alergias, anticoagulação e comorbidades relevantes, materiais/equipe, monitorização e plano de contingência, e registro pós-procedimento. Use o protocolo institucional e peça validação médica. Requer validação médica; não é prescrição.",
+                },
+            ]
+        },
+        {
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": "Paciente alérgico a penicilina. Quais pontos de segurança devo revisar antes de escolher antibiótico?"},
+                {
+                    "role": "assistant",
+                    "content": "Revisar tipo de reação e gravidade, histórico de anafilaxia, alternativas por classe, necessidade de cultura/antibiograma e risco de resistência. Checar função renal/hepática e interações. O assistente não define antibiótico nem dose/posologia; organize os dados para decisão do médico conforme protocolo institucional. Requer validação médica; não é prescrição.",
+                },
+            ]
+        },
     ]
     write_jsonl(os.path.join(synthetic_dir, "train.jsonl"), train)
     write_jsonl(os.path.join(synthetic_dir, "meta.jsonl"), [{"generated_at": datetime.utcnow().isoformat() + "Z"}])
@@ -86,4 +134,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
