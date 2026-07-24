@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TC4 Dashboard Clinico</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Tech Challenge 4</p>
+        <h1>Monitoramento Clinico Multimodal</h1>
+        <p class="subtitle">Dashboard para risco por paciente, transcricao, anomalias e alertas em tempo real.</p>
+      </div>
+      <div class="hero-status">
+        <span id="connection-badge" class="badge badge-neutral">Conectando stream...</span>
+        <span id="last-refresh" class="muted">Atualizando...</span>
+      </div>
+    </header>
+
+    <section class="stats-grid" id="stats-grid">
+      <article class="stat-card">
+        <span class="stat-label">Pacientes</span>
+        <strong id="stat-patients">0</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Eventos</span>
+        <strong id="stat-events">0</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Alertas</span>
+        <strong id="stat-alerts">0</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Alertas High</span>
+        <strong id="stat-high-alerts">0</strong>
+      </article>
+    </section>
+
+    <main class="dashboard-grid">
+      <section class="panel panel-wide">
+        <div class="panel-header">
+          <h2>Processamento De Audio</h2>          
+        </div>
+        <div class="detail-grid">
+          <div>
+            <form id="audio-upload-form" class="form-grid">
+              <label class="field">
+                <span>Paciente</span>
+                <input id="audio-patient-id" name="patient_id" type="text" value="PAZ01" required>
+              </label>
+              <label class="field">
+                <span>Idioma</span>
+                <input id="audio-language" name="language" type="text" value="en-US" required>
+              </label>
+              <label class="field">
+                <span>Timestamp</span>
+                <input id="audio-timestamp" name="timestamp" type="datetime-local">
+              </label>
+              <label class="field field-wide">
+                <span>Arquivo De Audio</span>
+                <input id="audio-file" name="audio_file" type="file" accept=".wav,audio/wav,audio/x-wav">
+              </label>
+              <label class="field field-wide">
+                <span>Transcricao Opcional</span>
+                <textarea id="audio-transcript" name="transcript" rows="3" placeholder="Use este campo se quiser testar sem arquivo ou sobrescrever a fala."></textarea>
+              </label>
+              <label class="field">
+                <span>Pause Ratio</span>
+                <input id="pause-ratio" name="pause_ratio" type="number" min="0" max="1" step="0.01" value="0.35">
+              </label>
+              <label class="field">
+                <span>Speech Rate WPM</span>
+                <input id="speech-rate-wpm" name="speech_rate_wpm" type="number" min="0" step="1" value="88">
+              </label>
+              <label class="field">
+                <span>Vocal Energy</span>
+                <input id="vocal-energy" name="vocal_energy" type="number" min="0" max="1" step="0.01" value="0.30">
+              </label>
+              <label class="field">
+                <span>Articulation Clarity</span>
+                <input id="articulation-clarity" name="articulation_clarity" type="number" min="0" max="1" step="0.01" value="0.40">
+              </label>
+              <label class="field">
+                <span>Breathing Irregularity</span>
+                <input id="breathing-irregularity" name="breathing_irregularity" type="number" min="0" max="1" step="0.01" value="0.60">
+              </label>
+              <div class="form-actions field-wide">
+                <button id="audio-submit-button" class="primary-button" type="submit">Processar Audio</button>
+                <button id="audio-demo-button" class="ghost-button" type="button">Rodar Audio Demo</button>
+                <button id="audio-reset-button" class="ghost-button" type="button">Limpar</button>
+              </div>
+            </form>
+          </div>
+          <div>
+            <div class="detail-card upload-card">
+              <div class="upload-meta">
+                <span class="muted">Preview local</span>
+                <audio id="audio-preview" controls preload="metadata"></audio>
+              </div>
+              <div class="helper-card">
+                <strong>Fluxos disponiveis</strong>
+                <p>Front: envia `multipart/form-data` para `/api/pipelines/audio/upload`.</p>
+                <p>Manual: continua disponivel em `POST /api/pipelines/audio` com JSON e `audio_file_path`.</p>
+              </div>
+              <div id="audio-upload-status" class="detail-card empty-state compact-state">Nenhum audio enviado nesta sessao.</div>
+              <div id="audio-upload-result" class="detail-card compact-state">O resultado do ultimo processamento aparecera aqui.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-wide">
+        <div class="panel-header">
+          <h2>Processamento De Sinais Vitais</h2>
+        </div>
+        <div class="detail-grid">
+          <div>
+            <form id="vital-import-form" class="form-grid">
+              <label class="field">
+                <span>Paciente</span>
+                <input id="vital-patient-id" name="patient_id" type="text" value="PVITAL01" required>
+              </label>
+              <label class="field">
+                <span>Intervalo (s)</span>
+                <input id="vital-interval-seconds" name="interval_seconds" type="number" min="1" step="1" value="60">
+              </label>
+              <label class="field">
+                <span>Max Samples</span>
+                <input id="vital-max-samples" name="max_samples" type="number" min="1" step="1" value="24">
+              </label>
+              <label class="field field-wide">
+                <span>Caminho Do Arquivo .vital</span>
+                <input id="vital-file-path" name="vital_file_path" type="text" placeholder="Deixe em branco para usar o demo vital/0001.vital">
+              </label>
+              <div class="form-actions field-wide">
+                <button id="vital-submit-button" class="primary-button" type="submit">Processar VitalDB</button>
+                <button id="vital-demo-button" class="ghost-button" type="button">Rodar Vital Demo</button>
+                <button id="vital-reset-button" class="ghost-button" type="button">Limpar</button>
+              </div>
+            </form>
+          </div>
+          <div>
+            <div class="detail-card upload-card">
+              <div class="helper-card">
+                <strong>Fluxos disponiveis</strong>
+                <p>Front: envia JSON para `/api/pipelines/vitals/vitaldb` e reaproveita o pipeline de sinais vitais.</p>
+                <p>Manual: continua disponivel em `POST /api/pipelines/vitals` com amostras ja normalizadas.</p>
+              </div>
+              <div id="vital-upload-status" class="detail-card empty-state compact-state">Nenhum arquivo .vital processado nesta sessao.</div>
+              <div id="vital-upload-result" class="detail-card compact-state">O resultado do ultimo processamento aparecera aqui.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Pacientes</h2>
+          <button id="refresh-button" class="ghost-button" type="button">Atualizar</button>
+        </div>
+        <div id="patients-list" class="list-block"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Alertas Ao Vivo</h2>
+          <span class="muted">via SSE</span>
+        </div>
+        <div id="live-alerts" class="list-block"></div>
+      </section>
+
+      <section class="panel panel-wide">
+        <div class="panel-header">
+          <h2>Detalhe Do Paciente</h2>
+          <span id="selected-patient-label" class="muted">Nenhum paciente selecionado</span>
+        </div>
+        <div id="clinical-banner" class="detail-card empty-state">Nenhum resumo clinico disponivel para este paciente.</div>
+        <div class="detail-grid">
+          <div>
+            <h3>Resumo de Risco</h3>
+            <div id="risk-summary" class="detail-card empty-state">Selecione um paciente para visualizar o risco agregado.</div>
+          </div>
+          <div>
+            <h3>Transcricao e Evidencias</h3>
+            <div id="transcript-panel" class="detail-card empty-state">A transcricao e as evidencias aparecerao aqui.</div>
+          </div>
+        </div>
+        <div class="monitor-section">
+          <div class="panel-header monitor-header">
+            <h3>Monitor De Sinais Vitais</h3>
+            <span class="muted">ultima janela processada</span>
+          </div>
+          <div id="vitals-monitor" class="detail-card empty-state">Nenhum processamento de sinais vitais disponivel para este paciente.</div>
+        </div>
+        <div class="detail-grid lower-grid">
+          <div>
+            <h3>Eventos Recentes</h3>
+            <div id="patient-events" class="list-block compact"></div>
+          </div>
+          <div>
+            <h3>Alertas Do Paciente</h3>
+            <div id="patient-alerts" class="list-block compact"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-wide">
+        <div class="panel-header">
+          <h2>Atividade Recente</h2>
+          <span class="muted">visao geral multimodal</span>
+        </div>
+        <div class="detail-grid lower-grid">
+          <div>
+            <h3>Eventos</h3>
+            <div id="recent-events" class="list-block compact"></div>
+          </div>
+          <div>
+            <h3>Alertas</h3>
+            <div id="recent-alerts" class="list-block compact"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
