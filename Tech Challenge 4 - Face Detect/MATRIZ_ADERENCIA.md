@@ -15,10 +15,7 @@
 | Deteccao de alteracoes vocais | Atendido | Heuristicas de transcript e metricas acusticas em `src/pipelines/audio/analyzer.py` |
 | Deteccao de anomalias em sinais vitais | Atendido | Pipeline em `src/pipelines/vitals/analyzer.py` |
 | Deteccao de anomalias em prescricoes e evolucao | Atendido | Pipeline em `src/pipelines/text/analyzer.py` |
-| Alertas automaticos para a equipe | Parcial | Alertas estruturados e stream SSE em `src/alerts/engine.py` e `src/api/routes_alerts.py` |
-| Monitoramento em tempo real | Parcial | Stream SSE de alertas em `/api/alerts/stream`; ainda sem fila externa ou notificacao ativa |
 | Relatorio tecnico | Atendido | Documento consolidado em `RELATORIO_TECNICO.md`, atualizado com validacoes reais de audio, vitals e video clinico |
-| Video demonstrativo | Pendente | Ainda nao produzido |
 
 ## Leitura do status
 

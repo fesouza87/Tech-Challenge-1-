@@ -240,6 +240,20 @@ O pipeline de `video` aceita arquivo de video local e tenta executar inferencia 
 - fallback para `MediaPipe Pose` quando OpenPose nao estiver disponivel;
 - fallback heuristico quando nenhum provider estiver acessivel.
 
+### Pre-requisitos para OpenPose no Windows
+
+Para reproduzir a validacao do provider `openpose` no ambiente Windows, foi necessario preparar previamente:
+
+- binarios do OpenPose com `OpenPoseDemo.exe` acessivel em um diretorio local;
+- `CMake`, utilizado na preparacao do ambiente nativo;
+- `Visual Studio Build Tools` com toolchain MSVC compatível (`v143`);
+- modelos do OpenPose presentes dentro da pasta configurada;
+- variavel `TC4_OPENPOSE_DIR` apontando para a raiz dessa instalacao.
+
+Observacao:
+
+- quando esses pre-requisitos nao estao disponiveis, o projeto continua funcional com fallback para `MediaPipe`, conforme o provider configurado em `TC4_VIDEO_POSE_PROVIDER`.
+
 ### Variaveis de ambiente de video
 
 ```text

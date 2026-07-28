@@ -50,8 +50,8 @@ Entrada de dados
 
 - Heuristicas sobre transcript clinico
 - Metricas acusticas informadas no payload
-- Azure Speech to Text opcional
-- Azure Text Analytics opcional
+- Azure Speech to Text
+- Azure Text Analytics
 
 ### Texto
 
@@ -66,8 +66,8 @@ Entrada de dados
 
 ### Video
 
-- Inferencia opcional com YOLOv8
-- Pose estimation opcional com OpenPose quando configurado, inclusive via pacote oficial com `OpenPoseDemo.exe`
+- Inferencia com YOLOv8
+- Pose estimation com OpenPose quando configurado, inclusive via pacote oficial com `OpenPoseDemo.exe`
 - Fallback para MediaPipe Pose
 - Relatorio automatico persistido por analise
 
@@ -142,6 +142,18 @@ Scripts adicionados para simplificar a preparacao da apresentacao:
   - remove listeners residuais na porta configurada quando necessario.
 
 Esses scripts foram criados para reduzir risco operacional antes da gravacao e da demonstracao ao vivo.
+
+### Pre-requisitos do ambiente de video no Windows
+
+Para habilitar a validacao real do provider `openpose` no Windows, o ambiente precisou incluir:
+
+- binarios do OpenPose com `OpenPoseDemo.exe`;
+- `CMake`;
+- `Visual Studio Build Tools` com MSVC `v143`;
+- modelos do OpenPose instalados junto ao diretorio configurado;
+- variavel `TC4_OPENPOSE_DIR` apontando para a raiz do OpenPose.
+
+Esse bloco de pre-requisitos e relevante porque a etapa de pose nao depende apenas do codigo Python do projeto: ela tambem depende de componentes nativos externos para reproducao do resultado validado com `pose_provider=openpose`.
 
 ### Passo-a-passo de uso da API
 
