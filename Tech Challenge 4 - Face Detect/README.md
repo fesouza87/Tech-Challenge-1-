@@ -1,4 +1,4 @@
-# Tech Challenge 4 - Face Detect
+# Tech Challenge 4 - Monitoramento Clinico Multimodal
 
 ## Visao geral
 
@@ -144,27 +144,6 @@ Entradas clinicas
 - **Fallbacks controlados** para manter o sistema funcional mesmo sem todos os provedores externos ativos.
 - **Dashboard acoplado a mesma API** para simplificar execucao local e demonstracao.
 - **Observabilidade simples e objetiva** com SSE, auditoria em arquivo e relatorios persistidos.
-
-## Stacks
-
-- **Backend**: FastAPI
-- **Orquestracao**: Python + filas assicronas
-- **Video**: OpenCV, YOLOv8, OpenPose ou alternativa equivalente de pose
-- **Audio**: Azure Speech to Text, librosa, pyannote opcional
-- **Texto**: Azure Text Analytics / Language, regras clinicas e embeddings
-- **Anomalias**: Isolation Forest, autoencoder, z-score robusto, regras clinicas
-- **Persistencia**: SQLite/PostgreSQL para metadados, Blob Storage para midia
-- **Observabilidade**: logs estruturados, auditoria e trilha de alertas
-- **Nuvem**: Azure AI Services, Azure Blob Storage, Azure Functions ou Container Apps
-
-## Entregaveis
-
-- codigo-fonte da solucao multimodal;
-- documentacao tecnica da arquitetura e fluxo de dados;
-- exemplos de processamento de audio, video e texto;
-- deteccao de anomalias com alertas;
-- integracao demonstravel com servicos Azure;
-- roteiro para video de apresentacao de ate 15 minutos.
 
 ## Documentos desta pasta
 
