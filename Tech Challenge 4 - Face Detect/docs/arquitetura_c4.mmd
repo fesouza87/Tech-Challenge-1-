@@ -1,0 +1,45 @@
+---
+title: TC4 - Arquitetura da Solucao de Monitoramento Clinico Multimodal
+---
+
+C4Container
+title TC4 - Arquitetura da Solucao de Monitoramento Clinico Multimodal
+Esta atividade proporcionou um primeiro contato prático com a construção de uma solução de monitoramento clínico multimodal, integrando diferentes técnicas de processamento de dados em áudio, texto, vídeo e sinais vitais. Ao longo do desenvolvimento, foi possível compreender os desafios de orquestrar múltiplos pipelines analíticos, consolidar eventos clínicos em uma arquitetura unificada e transformar essas informações em alertas acionáveis para apoio à tomada de decisão.
+Person(user, "Equipe clinica / operador", "Usa o dashboard e a API para processar entradas e acompanhar risco do paciente")
+
+System_Ext(azure, "Azure Cognitive Services", "Speech to Text e Text Analytics")
+System_Ext(openpose, "OpenPose CLI", "OpenPoseDemo.exe executado localmente no Windows")
+System_Ext(vitalfileEsta atividade proporcionou um primeiro contato prático com a construção de uma solução de monitoramento clínico multimodal, integrando diferentes técnicas de processamento de dados em áudio, texto, vídeo e sinais vitais. Ao longo do desenvolvimento, foi possível compreender os desafios de orquestrar múltiplos pipelines analíticos, consolidar eventos clínicos em uma arquitetura unificada e transformar essas informações em alertas acionáveis para apoio à tomada de decisão.s, "Arquivos .vital / midias clinicas", "Fontes de entrada para sinais vitais, audio e video")
+
+System_Boundary(tc4, "Tech Challenge 4") {
+  Container(web, "Dashboard Web", "HTML + CSS + JavaScript", "Interface clinica para upload, demos, visualizacao de pacientes, risco, alertas e sinais vitais")
+  Container(api, "API Multimodal", "FastAPI", "Expoe endpoints REST, SSE e coordena o processamento por modalidade")
+  Container(audio, "Pipeline de Audio", "Python", "Processa upload/transcricao, metricas acusticas e enriquecimento semantico")
+  Container(text, "Pipeline de Texto", "Python", "Analisa prescricoes, evolucoes e termos clinicos criticos")
+  Container(video, "Pipeline de Video", "Python + OpenCV + YOLOv8", "Extrai frames, detecta objetos e estima pose com OpenPose ou MediaPipe")
+  Container(vitals, "Pipeline de Sinais Vitais", "Python + vitaldb", "Importa .vital ou amostras normalizadas e detecta desvios fisiologicos")
+  Container(core, "Ingestao, Fusao e Alertas", "Python", "Normaliza eventos, consolida risco por paciente, gera alertas e atualiza o estado")
+  ContainerDb(state, "Estado Transiente e Auditoria", "Memoria + JSONL", "Mantem pacientes, eventos e alertas correntes; registra trilha em logs/audit.jsonl")
+  ContainerDb(reports, "Relatorios Tecnicos", "Arquivos JSON/TXT", "Persistencia dos relatorios de video em reports/video")
+}
+
+Rel(user, web, "Interage", "HTTPS")
+Rel(user, api, "Consome Swagger / endpoints", "HTTPS")
+Rel(web, api, "Chama API e stream SSE", "JSON/HTTP")
+Rel(api, audio, "Aciona processamento de audio")
+Rel(api, text, "Aciona processamento de texto")
+Rel(api, video, "Aciona processamento de video")
+Rel(api, vitals, "Aciona processamento de sinais vitais")
+Rel(audio, azure, "Transcreve e analisa texto", "SDK/API")
+Rel(video, openpose, "Executa pose estimation", "CLI/subprocesso")
+Rel(vitals, vitalfiles, "Importa .vital")
+Rel(audio, vitalfiles, "Le audios de entrada")
+Rel(video, vitalfiles, "Le videos de entrada")
+Rel(audio, core, "Envia evento multimodal")
+Rel(text, core, "Envia evento multimodal")
+Rel(video, core, "Envia evento multimodal")
+Rel(vitals, core, "Envia evento multimodal")
+Rel(core, state, "Atualiza estado e auditoria")
+Rel(video, reports, "Grava relatorios tecnicos")
+Rel(api, state, "Consulta pacientes, eventos e alertas")
+Rel(api, reports, "Exibe referencias de relatorios")
