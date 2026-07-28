@@ -3,3 +3,4 @@
 .venv_tc4/
 __pycache__/
 *.pyc
+data/external/

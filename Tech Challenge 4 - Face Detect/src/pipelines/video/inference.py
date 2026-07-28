@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import subprocess
+import tempfile
 from collections import Counter
 from dataclasses import dataclass
 from math import fabs
@@ -92,6 +95,20 @@ def analyze_video_file(payload: VideoAnalysisRequest, settings: Settings) -> Vid
 
     yolo_model, yolo_error = _build_yolo_model(settings)
     pose_backend, pose_provider, pose_error = _build_pose_backend(settings)
+    precomputed_pose_scores: list[float] | None = None
+    if _pose_backend_mode(pose_backend) == "cli":
+        precomputed_pose_scores, pose_error = _run_openpose_cli(video_path, payload, pose_backend)
+        if precomputed_pose_scores is None:
+            pose_backend = None
+            if settings.video_pose_provider == "auto":
+                fallback_backend, fallback_error = _try_mediapipe()
+                if fallback_backend is not None:
+                    pose_backend = fallback_backend
+                    pose_provider = "mediapipe"
+                    pose_error = None
+                else:
+                    pose_provider = "mediapipe"
+                    pose_error = fallback_error
 
     object_counter: Counter[str] = Counter()
     unexpected: set[str] = set()
@@ -138,7 +155,11 @@ def analyze_video_file(payload: VideoAnalysisRequest, settings: Settings) -> Vid
                         unexpected.add(label)
 
         pose_score = 0.0
-        if pose_backend is not None:
+        if precomputed_pose_scores is not None:
+            pose_score_index = frames_processed - 1
+            if pose_score_index < len(precomputed_pose_scores):
+                pose_score = precomputed_pose_scores[pose_score_index]
+        elif pose_backend is not None:
             try:
                 pose_score = _estimate_pose_score(frame, pose_backend, pose_provider)
             except Exception as exc:
@@ -164,6 +185,10 @@ def analyze_video_file(payload: VideoAnalysisRequest, settings: Settings) -> Vid
         f"YOLO utilizado: {bool(yolo_model is not None or not yolo_error)}",
         f"Provedor de pose: {pose_provider or 'nenhum'}",
     ]
+    if pose_provider == "openpose" and _pose_backend_mode(pose_backend):
+        notes.append(f"Modo OpenPose: {_pose_backend_mode(pose_backend)}")
+        if pose_backend is not None and pose_backend.get("json_frames") is not None:
+            notes.append(f"Frames JSON OpenPose: {pose_backend['json_frames']}")
     if yolo_error:
         notes.append(f"YOLO erro: {yolo_error}")
     if pose_error:
@@ -218,21 +243,38 @@ def _build_pose_backend(settings: Settings):
 def _try_openpose(settings: Settings):
     if not settings.openpose_dir:
         return None, "openpose_dir_not_configured"
+    openpose_root = Path(settings.openpose_dir)
+    errors: list[str] = []
+
     try:
         import sys
 
-        openpose_python = Path(settings.openpose_dir) / "build" / "python"
+        openpose_python = openpose_root / "build" / "python"
         if str(openpose_python) not in sys.path:
             sys.path.append(str(openpose_python))
         import pyopenpose as op
 
-        params = {"model_folder": str(Path(settings.openpose_dir) / "models")}
+        params = {"model_folder": str(openpose_root / "models")}
         wrapper = op.WrapperPython()
         wrapper.configure(params)
         wrapper.start()
-        return {"op": op, "wrapper": wrapper}, None
+        return {"mode": "python", "op": op, "wrapper": wrapper}, None
     except Exception as exc:
-        return None, str(exc)
+        errors.append(f"python={exc}")
+
+    openpose_demo, model_folder = _find_openpose_cli_paths(openpose_root)
+    if openpose_demo is not None and model_folder is not None:
+        return {
+            "mode": "cli",
+            "demo_exe": openpose_demo,
+            "model_folder": model_folder,
+        }, None
+
+    if openpose_demo is None:
+        errors.append("cli=openpose_demo_not_found")
+    elif model_folder is None:
+        errors.append("cli=openpose_models_not_found")
+    return None, "; ".join(errors)
 
 
 def _try_mediapipe():
@@ -279,3 +321,123 @@ def _avg(values: list[float]) -> float:
     if not values:
         return 0.0
     return sum(values) / len(values)
+
+
+def _pose_backend_mode(backend) -> str | None:
+    if backend is None:
+        return None
+    return backend.get("mode")
+
+
+def _find_openpose_cli_paths(openpose_root: Path) -> tuple[Path | None, Path | None]:
+    demo_candidates = [
+        openpose_root / "bin" / "OpenPoseDemo.exe",
+        openpose_root / "build" / "x64" / "Release" / "OpenPoseDemo.exe",
+    ]
+    model_candidates = [
+        openpose_root / "models",
+        openpose_root / "build" / "models",
+    ]
+
+    demo_exe = next((path for path in demo_candidates if path.is_file()), None)
+    model_folder = next((path for path in model_candidates if path.is_dir()), None)
+    return demo_exe, model_folder
+
+
+def _run_openpose_cli(video_path: Path, payload: VideoAnalysisRequest, backend) -> tuple[list[float] | None, str | None]:
+    demo_exe = backend["demo_exe"]
+    model_folder = backend["model_folder"]
+    last_frame = max((payload.max_frames - 1) * payload.frame_stride, 0)
+    command = [
+        str(demo_exe),
+        "--video",
+        str(video_path),
+        "--frame_first",
+        "0",
+        "--frame_last",
+        str(last_frame),
+        "--frame_step",
+        str(payload.frame_stride),
+        "--model_pose",
+        "BODY_25",
+        "--model_folder",
+        str(model_folder),
+        "--display",
+        "0",
+        "--render_pose",
+        "0",
+    ]
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="tc4_openpose_") as temp_dir:
+            output_dir = Path(temp_dir)
+            command.extend(["--write_json", str(output_dir)])
+            completed = subprocess.run(command, capture_output=True, text=True, timeout=600, check=False)
+            if completed.returncode != 0:
+                stderr = (completed.stderr or completed.stdout or "").strip()
+                return None, stderr or f"openpose_cli_failed_with_exit_code_{completed.returncode}"
+
+            json_files = sorted(output_dir.glob("*_keypoints.json"))
+            if not json_files:
+                return None, "openpose_cli_no_json_output"
+
+            sampled_files = json_files[: payload.max_frames]
+            backend["json_frames"] = len(json_files)
+            backend["sampled_json_frames"] = len(sampled_files)
+            return [_pose_score_from_json(path) for path in sampled_files], None
+    except subprocess.TimeoutExpired:
+        return None, "openpose_cli_timeout"
+    except Exception as exc:
+        return None, str(exc)
+
+
+def _pose_score_from_json(json_path: Path) -> float:
+    try:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+    except Exception:
+        return 0.0
+
+    best_score = 0.0
+    for person in payload.get("people", []):
+        keypoints = person.get("pose_keypoints_2d") or []
+        score = _body25_alignment_score(keypoints)
+        if score > best_score:
+            best_score = score
+    return min(best_score, 1.0)
+
+
+def _body25_alignment_score(keypoints: list[float]) -> float:
+    left_shoulder = _body25_point(keypoints, 5)
+    right_shoulder = _body25_point(keypoints, 2)
+    left_hip = _body25_point(keypoints, 12)
+    right_hip = _body25_point(keypoints, 9)
+    if not all([left_shoulder, right_shoulder, left_hip, right_hip]):
+        return 0.0
+
+    valid_y = [point[1] for point in _iter_body25_points(keypoints)]
+    body_height = max(valid_y, default=0.0) - min(valid_y, default=0.0)
+    if body_height <= 0:
+        return 0.0
+
+    shoulder_diff = fabs(right_shoulder[1] - left_shoulder[1])
+    hip_diff = fabs(right_hip[1] - left_hip[1])
+    return min((shoulder_diff + hip_diff) / (2.0 * body_height), 1.0)
+
+
+def _body25_point(keypoints: list[float], index: int) -> tuple[float, float, float] | None:
+    offset = index * 3
+    if len(keypoints) <= offset + 2:
+        return None
+    x_coord = float(keypoints[offset])
+    y_coord = float(keypoints[offset + 1])
+    confidence = float(keypoints[offset + 2])
+    if confidence <= 0 or (x_coord == 0 and y_coord == 0):
+        return None
+    return x_coord, y_coord, confidence
+
+
+def _iter_body25_points(keypoints: list[float]):
+    for index in range(len(keypoints) // 3):
+        point = _body25_point(keypoints, index)
+        if point is not None:
+            yield point

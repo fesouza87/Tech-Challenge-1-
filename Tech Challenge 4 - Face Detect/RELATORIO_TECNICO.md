@@ -45,7 +45,7 @@ Entrada de dados
 ### Video
 
 - Inferencia opcional com YOLOv8
-- Pose estimation opcional com OpenPose quando configurado
+- Pose estimation opcional com OpenPose quando configurado, inclusive via pacote oficial com `OpenPoseDemo.exe`
 - Fallback para MediaPipe Pose
 - Relatorio automatico persistido por analise
 
@@ -87,8 +87,6 @@ Validacoes reais executadas:
 ## 7. Limitacoes atuais
 
 - a validacao ponta a ponta com Azure depende de credenciais reais
-- OpenPose depende de instalacao local do ambiente e modelos
-- a validacao do YOLOv8 nesta maquina exigiu um ambiente isolado com pacotes instalados por `--target`
 - o monitoramento continuo ainda e leve, via stream SSE
 - o video final de demonstracao ainda precisa ser produzido
 
@@ -101,11 +99,13 @@ Validacoes reais executadas:
 - pipeline de video validado com arquivo real, processando `12` frames na API
 - pose via `MediaPipe` validada localmente
 - YOLOv8 validado localmente com inferencia real de objetos no evento `PV05`
+- pipeline `POST /api/pipelines/video` validado em `27/07/2026` com o video clinico `data/raw/video/rehab_demo_lifting_object.mp4`, gerando os relatorios `PVITALSHOW_video-7c10d2f6-9b04-458d-a146-acbe25e77b72.json/.txt`
+- na validacao final, o provider configurado foi `openpose`, com `pose_enabled=true`, `pose_error=null`, `runtime_pose_deviation_score=0.0129` e `Frames JSON OpenPose: 6`
+- a causa raiz do timeout anterior estava na amostragem: o pipeline limitava `frame_last`, mas nao passava `--frame_step` para o OpenPose CLI, fazendo o CPU processar frames demais
 - endpoint `POST /api/pipelines/audio` validado com Azure Speech + Azure Text no evento `PAZ01`
 - relatorios persistidos gerados em `reports/video/`
 
 ## 9. Proximos passos
 
-- consolidar dataset/demo de video clinico
 - capturar relatorios e screenshots para a apresentacao final
 - produzir o video de demonstracao de ate 15 minutos
