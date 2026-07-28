@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TC4 Dashboard Clinico</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260728l">
+  <link rel="stylesheet" href="/static/styles.css?v=20260728n">
 </head>
 <body>
   <div class="shell">
@@ -177,6 +177,61 @@
               </div>
             </div>
           </section>
+
+          <section class="panel panel-wide">
+            <div class="panel-header">
+              <h2>Processamento De Video</h2>
+            </div>
+            <div class="detail-grid">
+              <div>
+                <form id="video-process-form" class="form-grid">
+                  <label class="field">
+                    <span>Paciente</span>
+                    <input id="video-patient-id" name="patient_id" type="text" value="PVIDEO01" required>
+                  </label>
+                  <label class="field">
+                    <span>Procedimento</span>
+                    <input id="video-procedure-type" name="procedure_type" type="text" value="fisioterapia" required>
+                  </label>
+                  <label class="field">
+                    <span>Timestamp</span>
+                    <input id="video-timestamp" name="timestamp" type="datetime-local">
+                  </label>
+                  <label class="field field-wide">
+                    <span>Caminho Do Video</span>
+                    <input id="video-file-path" name="video_file_path" type="text" placeholder="Informe o caminho local do video para processar">
+                  </label>
+                  <label class="field">
+                    <span>Objetos Esperados</span>
+                    <input id="video-expected-objects" name="expected_objects" type="text" value="person" placeholder="Ex.: person, bed, chair">
+                  </label>
+                  <label class="field">
+                    <span>Pessoas Esperadas</span>
+                    <input id="video-expected-people" name="expected_people" type="number" min="1" step="1" value="1">
+                  </label>
+                  <label class="field">
+                    <span>Frame Stride</span>
+                    <input id="video-frame-stride" name="frame_stride" type="number" min="1" step="1" value="30">
+                  </label>
+                  <label class="field">
+                    <span>Max Frames</span>
+                    <input id="video-max-frames" name="max_frames" type="number" min="1" step="1" value="2">
+                  </label>
+                  <div class="form-actions field-wide">
+                    <button id="video-submit-button" class="primary-button" type="submit">Processar Video</button>
+                    <button id="video-demo-button" class="ghost-button" type="button">Rodar Video Demo</button>
+                    <button id="video-reset-button" class="ghost-button" type="button">Limpar</button>
+                  </div>
+                </form>
+              </div>
+              <div>
+                <div class="detail-card upload-card">
+                  <div id="video-upload-status" class="detail-card empty-state compact-state">Nenhum video processado nesta sessao.</div>
+                  <div id="video-upload-result" class="detail-card compact-state">O resultado do ultimo processamento aparecera aqui.</div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -241,6 +296,6 @@
     </main>
   </div>
 
-  <script src="/static/app.js?v=20260728l"></script>
+  <script src="/static/app.js?v=20260728n"></script>
 </body>
 </html>

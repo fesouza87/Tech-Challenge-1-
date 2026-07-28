@@ -8,6 +8,7 @@ const state = {
 };
 
 const DEMO_VITAL_PATH = "c:\\Users\\felip\\source\\FIAP\\TechChallenge1\\Tech-Challenge-1-\\Tech Challenge 4 - Face Detect\\vital\\0001.vital";
+const DEMO_VIDEO_PATH = "c:\\Users\\felip\\source\\FIAP\\TechChallenge1\\Tech-Challenge-1-\\Tech Challenge 4 - Face Detect\\data\\raw\\video\\rehab_demo_lifting_object.mp4";
 
 const elements = {
   patientsList: document.getElementById("patients-list"),
@@ -50,6 +51,20 @@ const elements = {
   vitalResetButton: document.getElementById("vital-reset-button"),
   vitalUploadStatus: document.getElementById("vital-upload-status"),
   vitalUploadResult: document.getElementById("vital-upload-result"),
+  videoProcessForm: document.getElementById("video-process-form"),
+  videoPatientId: document.getElementById("video-patient-id"),
+  videoProcedureType: document.getElementById("video-procedure-type"),
+  videoTimestamp: document.getElementById("video-timestamp"),
+  videoFilePath: document.getElementById("video-file-path"),
+  videoExpectedObjects: document.getElementById("video-expected-objects"),
+  videoExpectedPeople: document.getElementById("video-expected-people"),
+  videoFrameStride: document.getElementById("video-frame-stride"),
+  videoMaxFrames: document.getElementById("video-max-frames"),
+  videoSubmitButton: document.getElementById("video-submit-button"),
+  videoDemoButton: document.getElementById("video-demo-button"),
+  videoResetButton: document.getElementById("video-reset-button"),
+  videoUploadStatus: document.getElementById("video-upload-status"),
+  videoUploadResult: document.getElementById("video-upload-result"),
 };
 
 const tabButtons = Array.from(document.querySelectorAll("[data-tab-target]"));
@@ -543,6 +558,44 @@ function renderVitalResult(result) {
   `;
 }
 
+function renderVideoResult(result) {
+  const event = result.event || {};
+  const details = result.details || {};
+  const alert = result.generated_alert;
+  const risk = result.patient_risk || {};
+  const objectTags = Object.entries(details.object_counts || {}).map(
+    ([label, count]) => `<span class="tag">${escapeHtml(label)}=${escapeHtml(count)}</span>`
+  );
+
+  elements.videoUploadResult.innerHTML = `
+    <div class="info-grid">
+      <div class="info-item"><strong>Paciente</strong>${event.patient_id || "n/a"}</div>
+      <div class="info-item"><strong>Pipeline</strong>${result.pipeline || "video"}</div>
+      <div class="info-item"><strong>Procedimento</strong>${escapeHtml(details.procedure_type || event.metadata?.procedure_type || "n/a")}</div>
+      <div class="info-item"><strong>Frames</strong>${details.frames_processed ?? "n/a"}</div>
+      <div class="info-item"><strong>Severidade</strong><span class="badge ${severityBadgeClass(event.severity)}">${event.severity || "info"}</span></div>
+      <div class="info-item"><strong>Risco Atual</strong><span class="badge ${severityBadgeClass(risk.highest_severity)}">${risk.highest_severity || "info"}</span></div>
+    </div>
+    <p><strong>Sinal:</strong> ${escapeHtml(event.signal || "video_sem_anomalia_relevante")}</p>
+    <p><strong>Arquivo:</strong> <span class="result-path">${escapeHtml(event.metadata?.video_file_path || elements.videoFilePath.value || DEMO_VIDEO_PATH)}</span></p>
+    <p><strong>Provider de pose:</strong> ${escapeHtml(details.pose_provider || "n/a")} | <strong>YOLO:</strong> ${details.yolo_used ? "ativo" : "off"}</p>
+    <ul class="evidence-list">
+      ${(event.evidence || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+    </ul>
+    <div class="tag-row">
+      <span class="tag">pose_score=${formatScore(details.runtime_pose_deviation_score)}</span>
+      <span class="tag">motion_score=${formatScore(details.runtime_motion_anomaly_score)}</span>
+      <span class="tag">intrusoes=${details.critical_area_intrusions ?? 0}</span>
+      ${details.report_json_path ? `<span class="tag">json</span>` : ""}
+      ${details.report_txt_path ? `<span class="tag">txt</span>` : ""}
+      ${alert ? `<span class="tag">${escapeHtml(alert.title)}</span>` : ""}
+      ${objectTags.join("")}
+    </div>
+    <p><strong>Relatorio JSON:</strong> <span class="result-path">${escapeHtml(details.report_json_path || "n/a")}</span></p>
+    <p><strong>Relatorio TXT:</strong> <span class="result-path">${escapeHtml(details.report_txt_path || "n/a")}</span></p>
+  `;
+}
+
 function setUploadBusy(isBusy) {
   elements.audioSubmitButton.disabled = isBusy;
   elements.audioDemoButton.disabled = isBusy;
@@ -558,6 +611,20 @@ function setVitalBusy(isBusy) {
   elements.vitalFileUpload.disabled = isBusy;
   elements.vitalIntervalSeconds.disabled = isBusy;
   elements.vitalMaxSamples.disabled = isBusy;
+}
+
+function setVideoBusy(isBusy) {
+  elements.videoSubmitButton.disabled = isBusy;
+  elements.videoDemoButton.disabled = isBusy;
+  elements.videoResetButton.disabled = isBusy;
+  elements.videoPatientId.disabled = isBusy;
+  elements.videoProcedureType.disabled = isBusy;
+  elements.videoTimestamp.disabled = isBusy;
+  elements.videoFilePath.disabled = isBusy;
+  elements.videoExpectedObjects.disabled = isBusy;
+  elements.videoExpectedPeople.disabled = isBusy;
+  elements.videoFrameStride.disabled = isBusy;
+  elements.videoMaxFrames.disabled = isBusy;
 }
 
 function setUploadStatus(message, kind) {
@@ -586,6 +653,22 @@ function setVitalStatus(message, kind) {
   elements.vitalUploadStatus.innerHTML = `
     <div class="list-title">
       <span>Status Do VitalDB</span>
+      <span class="badge ${classes[kind] || "badge-neutral"}">${kind}</span>
+    </div>
+    <div class="list-meta">${escapeHtml(message)}</div>
+  `;
+}
+
+function setVideoStatus(message, kind) {
+  const classes = {
+    info: "badge-info",
+    success: "badge-low",
+    error: "badge-high",
+  };
+  elements.videoUploadStatus.className = "detail-card compact-state";
+  elements.videoUploadStatus.innerHTML = `
+    <div class="list-title">
+      <span>Status Do Video</span>
       <span class="badge ${classes[kind] || "badge-neutral"}">${kind}</span>
     </div>
     <div class="list-meta">${escapeHtml(message)}</div>
@@ -635,6 +718,24 @@ function buildVitalUploadFormData() {
   }
 
   return formData;
+}
+
+function buildVideoPayload() {
+  const videoFilePath = elements.videoFilePath.value.trim();
+  if (!videoFilePath) {
+    throw new Error("Informe o caminho do video ou use o botao Rodar Video Demo.");
+  }
+
+  return {
+    patient_id: elements.videoPatientId.value.trim(),
+    timestamp: elements.videoTimestamp.value ? new Date(elements.videoTimestamp.value).toISOString() : new Date().toISOString(),
+    procedure_type: elements.videoProcedureType.value.trim() || "fisioterapia",
+    video_file_path: videoFilePath,
+    expected_objects: parseCommaSeparatedList(elements.videoExpectedObjects.value),
+    expected_people: Number(elements.videoExpectedPeople.value || 1),
+    frame_stride: Number(elements.videoFrameStride.value || 30),
+    max_frames: Number(elements.videoMaxFrames.value || 2),
+  };
 }
 
 async function processVitalImport(payload, statusMessage) {
@@ -694,6 +795,35 @@ async function processVitalUpload(statusMessage) {
   }
 }
 
+async function processVideo(statusMessage) {
+  setVideoBusy(true);
+  setVideoStatus(statusMessage, "info");
+
+  try {
+    const response = await fetch("/api/pipelines/video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildVideoPayload()),
+    });
+    if (!response.ok) {
+      throw new Error(await extractErrorMessage(response));
+    }
+
+    const result = await response.json();
+    state.selectedPatientId = result.event.patient_id;
+    elements.videoPatientId.value = result.event.patient_id;
+    renderVideoResult(result);
+    setVideoStatus("Video processado com sucesso.", "success");
+    await loadOverview();
+    await loadPatient(result.event.patient_id);
+  } catch (error) {
+    console.error(error);
+    setVideoStatus(error.message || "Falha ao processar o video.", "error");
+  } finally {
+    setVideoBusy(false);
+  }
+}
+
 async function loadDemoAudio() {
   setUploadBusy(true);
   setUploadStatus("Carregando audio demo...", "info");
@@ -750,6 +880,23 @@ async function loadDemoVital() {
   );
 }
 
+async function handleVideoSubmit(event) {
+  event.preventDefault();
+  await processVideo("Processando video...");
+}
+
+async function loadDemoVideo() {
+  elements.videoPatientId.value = "PVIDEO01";
+  elements.videoProcedureType.value = "fisioterapia";
+  elements.videoTimestamp.value = defaultTimestampValue();
+  elements.videoFilePath.value = DEMO_VIDEO_PATH;
+  elements.videoExpectedObjects.value = "person";
+  elements.videoExpectedPeople.value = "1";
+  elements.videoFrameStride.value = "30";
+  elements.videoMaxFrames.value = "2";
+  await processVideo("Carregando video demo...");
+}
+
 function handleAudioFileSelection() {
   const file = elements.audioFile.files[0];
   if (state.audioPreviewUrl) {
@@ -785,6 +932,19 @@ function resetVitalForm() {
   elements.vitalMaxSamples.value = "24";
   elements.vitalUploadResult.innerHTML = "O resultado do ultimo processamento aparecera aqui.";
   setVitalStatus("Formulario limpo. Pronto para novo teste com VitalDB.", "info");
+}
+
+function resetVideoForm() {
+  elements.videoProcessForm.reset();
+  elements.videoPatientId.value = state.selectedPatientId || "PVIDEO01";
+  elements.videoProcedureType.value = "fisioterapia";
+  elements.videoTimestamp.value = defaultTimestampValue();
+  elements.videoExpectedObjects.value = "person";
+  elements.videoExpectedPeople.value = "1";
+  elements.videoFrameStride.value = "30";
+  elements.videoMaxFrames.value = "2";
+  elements.videoUploadResult.innerHTML = "O resultado do ultimo processamento aparecera aqui.";
+  setVideoStatus("Formulario limpo. Pronto para novo teste com video.", "info");
 }
 
 function buildVitalCard(label, fieldName, currentValue, unit, series, lowThreshold, highThreshold) {
@@ -969,6 +1129,13 @@ function defaultTimestampValue() {
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
+function parseCommaSeparatedList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function escapeHtml(text) {
   return String(text)
     .replaceAll("&", "&amp;")
@@ -988,9 +1155,14 @@ elements.audioResetButton.addEventListener("click", resetAudioForm);
 elements.vitalImportForm.addEventListener("submit", handleVitalImport);
 elements.vitalDemoButton.addEventListener("click", loadDemoVital);
 elements.vitalResetButton.addEventListener("click", resetVitalForm);
+elements.videoProcessForm.addEventListener("submit", handleVideoSubmit);
+elements.videoDemoButton.addEventListener("click", loadDemoVideo);
+elements.videoResetButton.addEventListener("click", resetVideoForm);
 elements.audioTimestamp.value = defaultTimestampValue();
+elements.videoTimestamp.value = defaultTimestampValue();
 setUploadStatus("Envie um arquivo de audio ou rode o demo para testar o pipeline.", "info");
 setVitalStatus("Importe um .vital ou rode o demo para testar o pipeline de sinais vitais.", "info");
+setVideoStatus("Informe um video local ou rode o demo para testar o pipeline de video.", "info");
 renderNotificationAlerts(state.liveAlerts);
 initializeTabs();
 document.addEventListener("click", handleDocumentClick);
