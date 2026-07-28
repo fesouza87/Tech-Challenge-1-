@@ -10,7 +10,6 @@
 - deteccao de anomalias em tempo real;
 - integracao com servicos gerenciados na nuvem, com prioridade para **Azure Cognitive Services**.
 
-O nome da pasta foi mantido como solicitado, mas o escopo da solucao vai alem de "face detect": trata-se de uma plataforma multimodal de vigilancia clinica e apoio preventivo.
 
 ## Objetivo da fase
 
@@ -22,30 +21,97 @@ Construir uma base de projeto capaz de:
 - consolidar alertas acionaveis para a equipe medica;
 - manter rastreabilidade, seguranca e auditabilidade.
 
-## Direcao recomendada
 
-A melhor forma de execucao e **evolutiva**, reaproveitando a arquitetura do `Tech Challenge 3 - Assistente`:
-
-1. manter um backend central em Python;
-2. separar pipelines por modalidade (`texto`, `audio`, `video`, `vitals`);
-3. unificar os resultados em um motor de regras/anomalias;
-4. usar Azure para transcricao, NLP clinico e servicos gerenciados;
-5. expor alertas e justificativas em API e dashboard.
-
-## Arquitetura sugerida
+## Arquitetura
 
 ```text
-Fontes de dados
-  -> ingestao multimodal
-  -> preprocessamento por modalidade
-  -> extracao de features e eventos
-  -> deteccao de anomalias
-  -> fusao multimodal
-  -> motor de alertas
-  -> API / dashboard / auditoria
+Entradas clinicas
+  -> API FastAPI / Dashboard HTML+JS
+  -> pipeline por modalidade (audio, texto, video, vitals)
+  -> extracao de sinais e enriquecimento por IA
+  -> normalizacao em evento clinico unico
+  -> score de risco e geracao de alerta
+  -> persistencia em memoria + trilha de auditoria + relatorios
+  -> consulta por API / dashboard / stream SSE
 ```
 
-### Modulos principais
+### Visao por camadas
+
+1. **Camada de entrada**
+   - O sistema recebe dados por endpoints FastAPI e pelo dashboard web.
+   - O frontend em `src/static/` consome a propria API do projeto para disparar upload de audio, processamento de sinais vitais e consulta de pacientes, eventos e alertas.
+   - As rotas HTTP ficam concentradas em `src/api/`, separadas por responsabilidade: dashboard, pipelines, alertas, ingestao e healthcheck.
+
+2. **Camada de processamento multimodal**
+   - Cada modalidade possui um pipeline proprio em `src/pipelines/`.
+   - O objetivo dessa camada e transformar uma entrada heterogenea em uma estrutura padronizada com:
+     - identificacao do paciente;
+     - timestamp clinico;
+     - sinal detectado;
+     - score de anomalia;
+     - severidade;
+     - evidencias e metadados tecnicos.
+   - Isso permite que audio, video, texto e sinais vitais sigam para as proximas etapas no mesmo formato logico.
+
+3. **Camada de fusao e avaliacao de risco**
+   - Depois que um pipeline gera um evento, o sistema calcula risco agregado do paciente em `src/fusion/`.
+   - Essa etapa resume:
+     - quantidade de eventos;
+     - quantidade de alertas;
+     - maior severidade observada;
+     - modalidades ativas;
+     - ultimo sinal clinico relevante.
+   - O resultado alimenta o dashboard e sustenta a leitura consolidada do estado do paciente.
+
+4. **Camada de alerta e observabilidade**
+   - Os eventos processados passam por regras em `src/alerts/` e `src/ingestion/`.
+   - Quando o score e a severidade justificam, o sistema gera um alerta estruturado com titulo, mensagem, evidencias e acao recomendada.
+   - Em paralelo, o processamento atualiza o estado em memoria da aplicacao, escreve auditoria em `logs/audit.jsonl` e, no caso do video, gera relatorios tecnicos em `reports/video/`.
+
+5. **Camada de apresentacao**
+   - O dashboard consolida pacientes, resumo de risco, evidencias, sinais vitais e alertas em tempo quase real.
+   - A atualizacao ao vivo ocorre por `Server-Sent Events` no endpoint `GET /api/alerts/stream`.
+   - Essa camada foi pensada para demonstracao tecnica e para leitura rapida de contexto clinico.
+
+### Fluxo operacional
+
+```text
+1. Usuario ou sistema envia uma entrada clinica
+2. A rota correspondente chama o pipeline da modalidade
+3. O pipeline executa preprocessamento e inferencia
+4. O resultado e convertido em Event
+5. O servico de ingestao registra o evento
+6. O motor de alertas decide se ha alerta acionavel
+7. O estado global do paciente e atualizado
+8. Dashboard, APIs de consulta e stream SSE refletem o novo estado
+```
+
+### Arquitetura por modalidade
+
+- `audio`
+  - Entrada por transcript direto, `audio_file_path` ou upload multipart.
+  - Integracao opcional com `Azure Speech` para transcricao.
+  - Integracao opcional com `Azure Text Analytics` para sentimento, frases-chave e entidades.
+  - Saida: evento clinico com evidencias acusticas e semanticas.
+
+- `text`
+  - Processa prescricoes, evolucoes e trechos clinicos estruturados ou livres.
+  - Aplica heuristicas e enriquecimento textual para identificar termos criticos e contexto de risco.
+  - Saida: evento textual normalizado para fusao multimodal.
+
+- `video`
+  - Le frames com OpenCV.
+  - Usa `YOLOv8` para objetos e `OpenPose` como provedor principal de pose quando configurado, com fallback para `MediaPipe` ou heuristica.
+  - Gera relatorio `.json` e `.txt` com detalhes tecnicos da inferencia.
+  - Saida: evento de video com contagem de objetos, anomalias e metadados de pose.
+
+- `vitals`
+  - Processa amostras normalizadas ou importa arquivo `.vital` por `vitaldb`.
+  - Construi janela temporal de sinais como SpO2, FC, PA, FR e temperatura.
+  - Detecta desvios como dessaturacao e exibe tendencia no dashboard.
+  - Saida: evento fisiologico e serie resumida para monitor visual.
+
+### Mapeamento dos modulos principais
 
 - `ingestion/`: upload, fila, batch e streaming.
 - `pipelines/video/`: OpenPose, YOLOv8 e regras de eventos.
@@ -55,9 +121,31 @@ Fontes de dados
 - `fusion/`: agregacao de evidencias e score de risco.
 - `alerts/`: regras, severidade, roteamento e notificacao.
 - `api/`: endpoints para upload, consulta e monitoramento.
+- `shared/`: contratos, configuracao via `.env` e estado global da aplicacao.
 - `docs/`: fluxo tecnico, resultados e roteiro de demonstracao.
 
-## Proposta de stack
+### Estado e persistencia
+
+- **Estado transiente em memoria**
+  - A instancia `AppState` mantem pacientes, eventos e alertas correntes para resposta rapida do dashboard.
+  - Esse modelo foi suficiente para a entrega e facilita a demonstracao local sem dependencia de banco externo.
+
+- **Auditoria**
+  - Toda execucao relevante pode ser registrada em `logs/audit.jsonl`.
+  - Isso preserva rastreabilidade de entradas, eventos processados e alertas gerados.
+
+- **Relatorios de video**
+  - Cada analise de video gera artefatos em `reports/video/`, o que ajuda na validacao tecnica e na apresentacao.
+
+### Decisoes arquiteturais da entrega
+
+- **Separacao por modalidade** para permitir evolucao independente dos pipelines.
+- **Padronizacao de evento clinico** para unificar a leitura multimodal.
+- **Fallbacks controlados** para manter o sistema funcional mesmo sem todos os provedores externos ativos.
+- **Dashboard acoplado a mesma API** para simplificar execucao local e demonstracao.
+- **Observabilidade simples e objetiva** com SSE, auditoria em arquivo e relatorios persistidos.
+
+## Stacks
 
 - **Backend**: FastAPI
 - **Orquestracao**: Python + filas assicronas
@@ -69,7 +157,7 @@ Fontes de dados
 - **Observabilidade**: logs estruturados, auditoria e trilha de alertas
 - **Nuvem**: Azure AI Services, Azure Blob Storage, Azure Functions ou Container Apps
 
-## Entregaveis esperados
+## Entregaveis
 
 - codigo-fonte da solucao multimodal;
 - documentacao tecnica da arquitetura e fluxo de dados;
@@ -80,7 +168,6 @@ Fontes de dados
 
 ## Documentos desta pasta
 
-- `PLANO_EXECUCAO.md`: analise dos requisitos e plano de implementacao.
 - `RELATORIO_TECNICO.md`: consolidacao tecnica da solucao implementada.
 - `MATRIZ_ADERENCIA.md`: matriz requisito x status x evidencia.
 
@@ -146,7 +233,7 @@ Payload com tentativa de Azure Speech:
 
 ## Integracao de video
 
-O pipeline de `video` agora aceita arquivo de video local e tenta executar inferencia real em modo opcional:
+O pipeline de `video` aceita arquivo de video local e tenta executar inferencia real em modo opcional:
 
 - `YOLOv8` via `ultralytics`;
 - `OpenPose` quando o ambiente local estiver configurado;
@@ -203,15 +290,207 @@ Arquivos gerados:
 
 Essa midia ja foi usada para validar o pipeline de `video` com arquivo real e `MediaPipe` ativo no ambiente local.
 
-Para validar `YOLOv8` nesta maquina, foi utilizado um ambiente isolado de pacotes em:
+Para validar `YOLOv8`, foi utilizado um ambiente isolado de pacotes em:
 
 - `c:\Users\felip\source\FIAP\TechChallenge1\tc4_yolo_pkgs`
 
 Com a API executada com `PYTHONPATH` apontando para esse diretorio, o pipeline de `video` validou inferencia real de objetos no video sintetico.
 
+## Inicializacao rapida
+
+Para reiniciar a aplicacao inteira do TC4 com um comando so, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start_tc4.ps1
+```
+
+O script:
+
+- usa a venv `.venv_tc4`;
+- le `TC4_API_HOST` e `TC4_API_PORT` do `.env`;
+- encerra a instancia anterior se a porta ja estiver em uso;
+- sobe a API FastAPI/Frontend novamente;
+- aguarda o healthcheck responder;
+- abre o dashboard no navegador.
+
+Opcoes uteis:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start_tc4.ps1 -NoBrowser
+powershell -ExecutionPolicy Bypass -File .\scripts\start_tc4.ps1 -Foreground
+```
+
+Para parar a aplicacao:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\stop_tc4.ps1
+```
+
+## Como usar a API (passo-a-passo)
+
+### 1) Subir a aplicacao
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start_tc4.ps1 -NoBrowser
+```
+
+URLs principais:
+
+- Dashboard: `http://127.0.0.1:8010/`
+- Swagger/OpenAPI: `http://127.0.0.1:8010/docs`
+- Healthcheck: `http://127.0.0.1:8010/health`
+
+### 2) Verificar se a API esta no ar
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8010/health
+```
+
+### 3) Rodar audio (JSON, sem upload)
+
+Endpoint:
+
+- `POST /api/pipelines/audio`
+
+Exemplo (transcript direto):
+
+```powershell
+$payload = @{
+  patient_id = "PAZMANUAL"
+  timestamp = "2026-07-28T20:00:00Z"
+  transcript = "Paciente com cansaco, falta de ar e fala arrastada."
+  language = "pt-BR"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8010/api/pipelines/audio" `
+  -ContentType "application/json" `
+  -Body $payload
+```
+
+### 4) Rodar audio (upload multipart)
+
+Endpoint:
+
+- `POST /api/pipelines/audio/upload`
+
+Exemplo (usando o demo do projeto):
+
+```powershell
+curl.exe -sS -X POST "http://127.0.0.1:8010/api/pipelines/audio/upload" ^
+  -F "patient_id=PAZUPLOAD" ^
+  -F "timestamp=2026-07-28T20:05:00Z" ^
+  -F "language=en-US" ^
+  -F "audio_file=@data/synthetic/media/speech_demo_en.wav"
+```
+
+### 5) Rodar texto
+
+Endpoint:
+
+- `POST /api/pipelines/text`
+
+Exemplo:
+
+```powershell
+$payload = @{
+  patient_id = "PTXT01"
+  timestamp = "2026-07-28T20:10:00Z"
+  text = "Evolucao: paciente com piora de dispneia. Ajuste de oxigenoterapia."
+  language = "pt-BR"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8010/api/pipelines/text" `
+  -ContentType "application/json" `
+  -Body $payload
+```
+
+### 6) Rodar sinais vitais (importacao VitalDB)
+
+Endpoint:
+
+- `POST /api/pipelines/vitals/vitaldb`
+
+Exemplo (deixe `vital_file_path` em branco para usar `vital/0001.vital`):
+
+```powershell
+$payload = @{
+  patient_id = "PVITALSHOW"
+  interval_seconds = 60
+  max_samples = 24
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8010/api/pipelines/vitals/vitaldb" `
+  -ContentType "application/json" `
+  -Body $payload
+```
+
+### 7) Rodar video (arquivo real)
+
+Endpoint:
+
+- `POST /api/pipelines/video`
+
+Exemplo (video de fisioterapia ja presente no projeto):
+
+```powershell
+$payload = @{
+  patient_id = "PVITALSHOW"
+  timestamp = "2026-07-28T20:20:00Z"
+  procedure_type = "fisioterapia"
+  video_file_path = "C:\Users\felip\source\FIAP\TechChallenge1\Tech-Challenge-1-\Tech Challenge 4 - Face Detect\data\raw\video\rehab_demo_lifting_object.mp4"
+  expected_objects = @("person")
+  expected_people = 1
+  frame_stride = 10
+  max_frames = 6
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8010/api/pipelines/video" `
+  -ContentType "application/json" `
+  -Body $payload
+```
+
+Resultado esperado:
+
+- `details.report_json_path` e `details.report_txt_path` apontando para `reports/video/`
+- `details.pose_provider` indicando `openpose` quando configurado
+
+### 8) Consultar resultados no dashboard (overview/paciente)
+
+- `GET /api/dashboard/overview`
+- `GET /api/dashboard/patient/{patient_id}`
+
+Exemplo:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8010/api/dashboard/overview"
+Invoke-RestMethod "http://127.0.0.1:8010/api/dashboard/patient/PVITALSHOW"
+```
+
+### 9) Consultar alertas e stream ao vivo (SSE)
+
+- Lista:
+  - `GET /api/alerts`
+  - `GET /api/alerts/patient/{patient_id}`
+- Stream SSE:
+  - `GET /api/alerts/stream`
+
+Exemplo de stream no terminal:
+
+```powershell
+curl.exe -N "http://127.0.0.1:8010/api/alerts/stream"
+```
+
 ## Monitoramento continuo
 
-Para aproximar o requisito de acompanhamento em tempo real, a API expoe:
+Para o requisito de acompanhamento em tempo real, a API expoe:
 
 - `GET /api/alerts`
 - `GET /api/alerts/patient/{patient_id}`
@@ -219,12 +498,11 @@ Para aproximar o requisito de acompanhamento em tempo real, a API expoe:
 
 O endpoint `stream` utiliza SSE (`text/event-stream`) para publicar alertas conforme eles entram no sistema.
 
-## Estrutura inicial sugerida
+## Estrutura inicial
 
 ```text
 Tech Challenge 4 - Face Detect/
   README.md
-  PLANO_EXECUCAO.md
   data/
     raw/
     processed/

@@ -19,10 +19,19 @@ def dashboard_home() -> FileResponse:
 
 @router.get("/api/dashboard/demo-audio")
 def dashboard_demo_audio() -> FileResponse:
-    demo_audio_path = Path(__file__).resolve().parents[2] / "data" / "synthetic" / "media" / "speech_demo_en.wav"
+    demo_audio_path = Path(__file__).resolve().parents[2] / "data" / "synthetic" / "media" / "speech_demo.wav"
     if not demo_audio_path.exists():
         raise HTTPException(status_code=404, detail="Arquivo demo de audio nao encontrado.")
-    return FileResponse(demo_audio_path, media_type="audio/wav", filename=demo_audio_path.name)
+    return FileResponse(
+        demo_audio_path,
+        media_type="audio/wav",
+        filename=demo_audio_path.name,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @router.get("/api/dashboard/overview")

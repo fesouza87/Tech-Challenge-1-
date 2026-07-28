@@ -120,6 +120,56 @@ def run_vitals_vitaldb_pipeline(payload: VitalsVitalDbImportRequest, request: Re
     return record_event(container, event, source="pipeline_vitals_vitaldb", details=details)
 
 
+@router.post("/vitals/vitaldb/upload", response_model=PipelineRunResponse)
+async def run_vitals_vitaldb_upload_pipeline(
+    request: Request,
+    patient_id: str = Form(...),
+    interval_seconds: int = Form(60),
+    max_samples: int = Form(24),
+    vital_file_path: str | None = Form(default=None),
+    vital_file: UploadFile | None = File(default=None),
+) -> PipelineRunResponse:
+    container = request.app.state.container
+    temp_file_path: str | None = None
+
+    if vital_file is not None and vital_file.filename:
+        suffix = Path(vital_file.filename).suffix or ".vital"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_file_path = temp_file.name
+            while chunk := await vital_file.read(1024 * 1024):
+                temp_file.write(chunk)
+
+    try:
+        payload = VitalsVitalDbImportRequest(
+            patient_id=patient_id,
+            vital_file_path=temp_file_path or vital_file_path,
+            interval_seconds=interval_seconds,
+            max_samples=max_samples,
+            metadata={"ingest_mode": "multipart_upload"},
+        )
+        imported = import_vitaldb_as_vitals(payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    finally:
+        if vital_file is not None:
+            await vital_file.close()
+
+    try:
+        event, details = analyze_vitals(imported.payload)
+        details.update(imported.details)
+        details["uploaded_filename"] = vital_file.filename if vital_file else None
+        return record_event(container, event, source="pipeline_vitals_vitaldb_upload", details=details)
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+
+
 @router.post("/video", response_model=PipelineRunResponse)
 def run_video_pipeline(payload: VideoAnalysisRequest, request: Request) -> PipelineRunResponse:
     container = request.app.state.container
